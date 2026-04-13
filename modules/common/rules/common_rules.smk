@@ -630,3 +630,33 @@ rule vcfrename:
     "echo '{output.vcfclair}' ; "
     "echo '{output.vcfhifi}' ; "
     "scripts/rename_sample_name_VCF_recursive.sh ../analysis/{wildcards.sample} {wildcards.sample} ; "
+
+
+##################################################
+#                     VARSEQ                     #
+##################################################
+
+rule varseqProject:
+  input:
+    vcf = "../analysis/{sample}/renamed_vcfs/variants_{sample}_clair3.vcf.gz"
+  output:
+    "../analysis/{sample}/varseq/{sample}_varseq_submitted.txt"
+  message:
+    "Submitting VarSeq project: {wildcards.sample}"
+  params:
+    host = config["varseqHost"],
+    submitHost = config["varseqSubmitHost"],
+    remoteScript = config["varseqRemoteScript"],
+    template = config["varseqTemplate"],
+    vcfRemote = expand("{base}/{sample}/renamed_vcfs/variants_{sample}_clair3.vcf.gz", base=config["analysisDir"], sample="{sample}"),
+    projectDir = expand("{base}/{sample}/varseq", base=config["analysisDir"], sample="{sample}")
+  shell:
+    "scripts/run_varseq_remote.sh "
+    "{wildcards.sample} "
+    "{params.vcfRemote} "
+    "{params.template} "
+    "{params.projectDir} "
+    "{params.submitHost} "
+    "{params.host} "
+    "{params.remoteScript} "
+    "{output}"

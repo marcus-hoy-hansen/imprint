@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+WATCHDIR="/data/output"                     # local root
+REMOTE_HOST=""
+REMOTE_DIR="."                              # remote base dir
+APPEND_ONLY=true                            # true: never overwrite existing server files
+RETRY_DELAY=20                              # seconds between retry attempts
+
+build_rsync_flags() {
+  local with_out="${1-}"                   # pass "out" to add --out-format
+  local flags=(
+    -a --partial --append-verify --relative
+    --ignore-missing-args                 # ignore files that vanish between event and transfer
+    --chown=:nanopore_kga
+    --chmod=Dg+s,Du=rwx,Dg=rwx,Do=rx,Fu=rw,Fg=rw,Fo=r
+    --exclude='*.temp' --exclude='.*' --exclude='finished/*'
+  )
+  if [[ "$APPEND_ONLY" == true ]]; then
+    flags+=(--update --size-only --info=progress2 -h)
+  else
+    flags+=(--update)
+  fi
+  if [[ "$with_out" == "out" ]]; then
+    flags+=(--out-format="Uploading: %n%L")
+  fi
+  echo "${flags[@]}"
+}
+
+rsync_with_retry() {
+  local -a cmd=("$@")
+  local attempt=1
+  until "${cmd[@]}"; do
+    echo "rsync failed (attempt $attempt), retrying in ${RETRY_DELAY}s..."
+    ((attempt++))
+    sleep "$RETRY_DELAY"
+  done
+}
+
+# One-time catch-up on start (creates folders, resumes partial)
+echo "Initial catch-up sync..."
+RSYNC_FLAGS=($(build_rsync_flags out))
+rsync_with_retry rsync "${RSYNC_FLAGS[@]}" "$WATCHDIR/./" "$REMOTE_HOST:$REMOTE_DIR/"
+echo "Catch-up done."
+
+# Watch for new/updated files and new directories, skipping hidden/tmp names
+inotifywait -m -r -e close_write,moved_to,create \
+  --exclude '(^|/)\.' --exclude '(^|/).*\\.tmp$' \
+  --format "%w%f" "$WATCHDIR" |
+while IFS= read -r FILE; do
+  [[ -e "$FILE" || -d "$FILE" ]] || continue   # skip if it vanished
+
+  if [[ -d "$FILE" ]]; then
+    # Mirror newly created directory
+    RELD="${FILE#"$WATCHDIR/"}"
+    SRCD="$WATCHDIR/./$RELD/"
+    echo "Creating folder: $RELD/"
+    RSYNC_DIR_FLAGS=($(build_rsync_flags))
+    rsync_with_retry rsync "${RSYNC_DIR_FLAGS[@]}" "$SRCD" "$REMOTE_HOST:$REMOTE_DIR/"
+    echo "Done!"
+    continue
+  fi
+
+  # Single-file sync with the same flags
+  RSYNC_INC_FLAGS=($(build_rsync_flags))
+  RELF="${FILE#"$WATCHDIR/"}"
+  SRCF="$WATCHDIR/./$RELF"
+  echo "Uploading: $RELF"
+  rsync_with_retry rsync "${RSYNC_INC_FLAGS[@]}" "$SRCF" "$REMOTE_HOST:$REMOTE_DIR/"
+  echo "Done!"
+done
+
+
+

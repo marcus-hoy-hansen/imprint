@@ -1,6 +1,8 @@
 # Pipeline for adaptive sampling (AS)
 configfile: "config/config.yaml"
 
+localrules: varseqProject
+
 rule all:
     input:
         # DATA PREPARATION
@@ -35,7 +37,10 @@ rule all:
         
         # VCF HEADER RENAMING
         expand("../analysis/{sample}/renamed_vcfs/variants_{sample}_clair3.vcf.gz", sample=config["sample"]),
-        expand("../analysis/{sample}/renamed_vcfs/CNV_{sample}_hifiCNV.vcf.gz", sample=config["sample"])
+        expand("../analysis/{sample}/renamed_vcfs/CNV_{sample}_hifiCNV.vcf.gz", sample=config["sample"]),
+
+        # VARSEQ
+        expand("../analysis/{sample}/varseq/{sample}_varseq_submitted.txt", sample=config["sample"])
 
 module common:
     snakefile: "../../modules/common/Snakefile_common"
@@ -172,4 +177,5 @@ use rule straglr from common
 #                    RENAME                      #
 ##################################################
 use rule vcfrename from common
+use rule varseqProject from common
 

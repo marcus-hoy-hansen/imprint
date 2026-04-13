@@ -6,7 +6,7 @@
 #SBATCH --time 24:00:00
 #SBATCH --output=logs/runSnakemake-%j.out
 #SBATCH --error=logs/runSnakemake-%j.out
-#SBATCH --chdir=/faststorage/project/nanopore_kga/workflow
+#SBATCH --chdir=/faststorage/project/nanopore_kga/workflow_dev
 
 # Read input arguments
 if [ $# -eq 0 ]; then
@@ -22,6 +22,8 @@ fi
 
 # Input arguments
 SAMPLE=$1
+shift
+EXTRA_ARGS=("$@")
 
 
 # Split input to get sampleID, reference and type (AS or WGS)
@@ -69,7 +71,8 @@ if [[ $TYPE =~ "AS" ]]; then
     --use-conda \
     --conda-frontend conda \
     --rerun-incomplete \
-    --profile profiles/AS/
+    --profile profiles/AS/ \
+    "${EXTRA_ARGS[@]}"
 
 
 ##############
@@ -86,7 +89,8 @@ elif [[ $TYPE == "WGS" ]]; then
     --use-conda \
     --conda-frontend conda \
     --rerun-incomplete \
-    --profile profiles/WGS/
+    --profile profiles/WGS/ \
+    "${EXTRA_ARGS[@]}"
 fi
 
 

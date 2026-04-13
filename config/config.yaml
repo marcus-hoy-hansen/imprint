@@ -19,6 +19,11 @@ minimumCoverage: 5
 dataDir: ../STORAGE/resources/data
 referenceDir: ../STORAGE/resources/references
 softwareDir: ../STORAGE/resources/software
+varseqHost: varseq-02
+varseqRemoteScript: /faststorage/project/nanopore_kga/workflow_dev/scripts/varseq_remote_runner.sh
+varseqTemplate: /faststorage/project/nanopore_kga/workflow/varseqtemplates/Imprinting_ONT-LR-seq_HG38_v2.vsproject-template
+analysisDir: /faststorage/project/nanopore_kga/analysis
+varseqSubmitHost: fe-open-01
 
 clair3Model: r1041_e82_400bps_hac_v430
 

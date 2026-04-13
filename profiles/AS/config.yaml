@@ -44,6 +44,7 @@ set-threads:
   hifiCNV_cleanup: 1
   straglr: 32
   vcfrename: 1
+  varseqProject: 1
 
 
 # Resource settings for individual rules
@@ -165,4 +166,8 @@ set-resources:
   vcfrename:
     mem_mb: 4096    # 1 GB
     runtime: 10     # 10 minutes
+
+  varseqProject:
+    mem_mb: 4096    # 4 GB
+    runtime: 1440   # 24 hours
 
