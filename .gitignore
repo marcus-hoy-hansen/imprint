@@ -1,0 +1,7 @@
+.snakemake/
+logs/
+.watch_state/
+CHANGELOG.pdf
+software/
+varseqtemplates/
+VarSeq Templates/

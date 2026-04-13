@@ -1,0 +1,153 @@
+# Pipeline for whole genome sequencing (WGS)
+configfile: "config/config.yaml"
+
+rule all:
+    input:
+        # DATA PREPARATION
+        expand("../analysis/{sample}/data/{sample}.{bamSuffix}", sample=config["sample"], bamSuffix=["bam", "bam.bai"]),
+
+        # QC
+        expand("../analysis/{sample}/QC/{sample}_NanoPlot-report.html", sample=config["sample"]),
+    
+        # VARIANT CALLING
+        expand("../analysis/{sample}/variants/{sample}_clair3.vcf.gz", sample=config["sample"]),
+        expand("../analysis/{sample}/data/{sample}.haplotagged.{bamSuffix}", sample=config["sample"], bamSuffix=["bam", "bam.bai"]),
+
+        # METHYLATION
+        # Modkit
+        expand("../analysis/{sample}/methylation/DMR/{sample}_dmrPair_perCpG.bed.{suffix}", sample=config["sample"], suffix=["gz", "gz.tbi"]),
+        expand("../analysis/{sample}/methylation/DMR/{sample}_dmrPair_segments.bed.{suffix}", sample=config["sample"], suffix=["gz", "gz.tbi"]),
+        # NanoImprint
+        expand("../analysis/{sample}/methylation/{sample}_NanoImprint_v2.0.html", sample=config["sample"]),
+
+        # STRUCTURAL VARIANTS
+        expand("../analysis/{sample}/structural_variation/{sample}_sniffles2.vcf.gz", sample=config["sample"]),
+        expand("../analysis/{sample}/structural_variation/{sample}_cuteSV.vcf.{suffix}", sample=config["sample"], suffix=["gz", "gz.tbi"]),
+
+        # COPY NUMBER VARIANTS
+        expand("../analysis/{sample}/CNV/{sample}_hifiCNV.vcf.gz", sample=config["sample"]),
+        expand("../analysis/{sample}/CNV/{sample}_hifiCNV.depth.bw", sample=config["sample"]),
+        
+        # REPEATS
+        expand("../analysis/{sample}/STR/{sample}_straglr.bed", sample=config["sample"]),
+        expand("../analysis/{sample}/STR/{sample}_straglr.tsv", sample=config["sample"]),
+        expand("../analysis/{sample}/STR/{sample}_straglr.vcf", sample=config["sample"]),
+
+        # VCF HEADER RENAMING
+        expand("../analysis/{sample}/renamed_vcfs/variants_{sample}_clair3.vcf.gz", sample=config["sample"]),
+        expand("../analysis/{sample}/renamed_vcfs/CNV_{sample}_hifiCNV.vcf.gz", sample=config["sample"])
+
+module common:
+    snakefile: "../../modules/common/Snakefile_common"
+    config: config
+
+
+
+##################################################
+#                DATA PREPARATION                #
+##################################################
+use rule BAMlist from common
+use rule mergeBAMs from common
+use rule sortMergedBAM from common
+use rule indexMergedBAM from common
+
+
+
+##################################################
+#                QUALITY CONTROL                 #
+##################################################
+use rule nanoPlot from common
+
+
+
+##################################################
+#                VARIANT CALLING                 #
+##################################################
+use rule clair3 from common
+use rule clair3CleanUp from common
+
+
+
+##################################################
+#                   METHYLATION                  #
+##################################################
+use rule updateTags from common
+use rule indexUpdatedBAM from common
+use rule modkitPileupFull from common
+use rule modkitPileupHaplotypes from common
+use rule renameBedMethyls from common
+use rule bgzipBedMethyl from common
+use rule indexBedMethyl from common
+
+#-------------#
+# NanoImprint #
+#-------------#
+use rule extractImprintRegions from common
+use rule nanoImprint from common
+
+#---------#
+#   DMR   #
+#---------#
+use rule dmrPairSegment from common
+use rule bgzipDmrPairBed from common
+use rule indexDmrPairBed from common
+
+
+
+##################################################
+#               STRUCTURAL VARIANTS              #
+##################################################
+use rule sniffles2 from common
+use rule cuteSV from common
+use rule bgzipVCF from common
+use rule indexVCF from common
+
+
+
+##################################################
+#              COPY NUMBER VARIANTS              #
+##################################################
+
+# Run hifiCNV
+rule hifiCNV:
+  input:
+    bam = "../analysis/{sample}/data/{sample}.bam",
+    bai = "../analysis/{sample}/data/{sample}.bam.bai",
+    vcf = "../analysis/{sample}/variants/{sample}_clair3.vcf.gz",
+    ref = expand("{referenceDir}/{ref}", referenceDir=config["referenceDir"], ref=config["refFile"])
+  output:
+    bedgraph = "../analysis/{sample}/CNV/{sample}_hifiCNV.Sample0.copynum.bedgraph",
+    depth_bw = "../analysis/{sample}/CNV/{sample}_hifiCNV.Sample0.depth.bw",
+    vcf = "../analysis/{sample}/CNV/{sample}_hifiCNV.Sample0.vcf.gz",
+    maf_bw = "../analysis/{sample}/CNV/{sample}_hifiCNV.SAMPLE.maf.bw"
+  message:
+    "Running hifiCNV: {wildcards.sample}"
+  conda:
+    "../../envs/hifiCNV.yaml"
+  shell:
+    "mkdir -p ../analysis/{wildcards.sample}/CNV "
+    "&& "
+    "hificnv "
+    "--bam {input.bam} "
+    "--maf {input.vcf} "
+    "--ref {input.ref} "
+    "--output-prefix ../analysis/{wildcards.sample}/CNV/{wildcards.sample}_hifiCNV "
+    "--cov-regex . "
+    "--threads {threads}"
+
+
+
+use rule hifiCNV_cleanup from common
+
+
+
+##################################################
+#                    REPEATS                     #
+##################################################
+use rule straglr from common
+
+
+##################################################
+#                    RENAME                      #
+##################################################
+use rule vcfrename from common

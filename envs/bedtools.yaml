@@ -1,0 +1,15 @@
+name: bedtools_env
+channels:
+  - conda-forge
+  - bioconda
+  - genomedk
+dependencies:
+  - _libgcc_mutex=0.1=conda_forge
+  - _openmp_mutex=4.5=2_gnu
+  - bedtools=2.31.1=hf5e1c6e_1
+  - bzip2=1.0.8=hd590300_5
+  - libgcc-ng=13.2.0=h77fa898_7
+  - libgomp=13.2.0=h77fa898_7
+  - libstdcxx-ng=13.2.0=hc0a3c3a_7
+  - libzlib=1.2.13=hd590300_5
+  - xz=5.2.6=h166bdaf_0

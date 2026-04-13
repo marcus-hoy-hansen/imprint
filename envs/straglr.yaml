@@ -1,0 +1,17 @@
+name: straglr_env
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.10
+  - pip
+  - numpy
+  - scipy
+  - scikit-learn
+  - pysam
+  - pybedtools
+  - bedtools
+  - blast
+  - trf
+  - pip:
+      - git+https://github.com/bcgsc/straglr.git@v1.5.0#egg=straglr

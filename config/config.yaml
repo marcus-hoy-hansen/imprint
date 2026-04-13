@@ -1,0 +1,51 @@
+##########
+# MODKIT #
+##########
+modkitVersion: v0.4.1
+
+# pileup
+# I don't think we should do line change on this one if adding more thresholds
+modkitThreshold: C:0.8
+
+# dmr pair segment
+significanceFactor: 0.05
+minimumCoverage: 5
+
+
+
+##########
+# CLAIR3 #
+##########
+dataDir: ../STORAGE/resources/data
+referenceDir: ../STORAGE/resources/references
+softwareDir: ../STORAGE/resources/software
+
+clair3Model: r1041_e82_400bps_hac_v430
+
+
+
+##########
+# CuteSV #
+##########
+# parameters recommended by CuteSV team
+CUTESV_max_cluster_bias_INS: 100
+CUTESV_diff_ratio_merging_INS: 0.3
+CUTESV_max_cluster_bias_DEL: 100
+CUTESV_diff_ratio_merging_DEL: 0.3
+
+
+
+###########
+# hifiCNV #
+###########
+# Path to directory with adaptive sampling files
+ASdir: /faststorage/project/nanopore_kga/development/adaptiveSamplingBed
+
+
+
+###########
+# Spectre # Currently not used
+###########
+# Mosdepth parameters (recommended by Spectre team)
+#MOSDEPTH_binSize: 1000
+#MOSDEPTH_minMapQ: 20

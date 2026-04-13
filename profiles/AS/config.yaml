@@ -1,0 +1,168 @@
+# Profile: Adaptive sampling (AS)
+
+executor: slurm
+jobs: 10                      # Run at most N jobs in parallel
+latency-wait: 120             # Wait 2 minutes for output file to appear after finished job
+keep-going: True              # Keep running independent jobs, even if another job fails
+keep-incomplete: True         # Don't delete output files if job fails
+sdm: conda                    # Use conda environments
+#quiet: progress
+
+
+# Default resource settings
+default-resources:
+  slurm_account: nanopore_kga
+
+
+# CPU/threads for each rule
+set-threads:
+  BAMlist: 1
+  mergeBAMs: 32
+  sortMergedBAM: 20
+  indexMergedBAM: 4
+  nanoPlot: 15
+  clair3: 33
+  clair3CleanUp: 1
+  updateTags: 1
+  indexUpdatedImprintBAM: 4
+  modkitPileupFull: 24
+  modkitPileupHaplotypes: 24
+  renameBedMethyls: 1
+  bgzipBedMethyl: 4
+  indexBedMethyl: 4
+  dmrPairSegment: 16
+  bgzipDmrPairBed: 4
+  indexDmrPairBed: 4
+  extractImprintRegions: 8
+  nanoImprint: 4
+  sniffles2: 20
+  cuteSV: 16
+  bgzipVCF: 4
+  indexVCF: 4
+  makeBlacklist: 4
+  hifiCNV: 8
+  hifiCNV_cleanup: 1
+  straglr: 32
+  vcfrename: 1
+
+
+# Resource settings for individual rules
+# NB: runtime is defined in minutes
+# NB: memory is defined in MB
+set-resources:
+  BAMlist:
+    mem_mb: 1024    # 1 GB
+    runtime: 10     # 10 minutes
+
+  mergeBAMs:
+    mem_mb: 51200   # 50 GB
+    runtime: 360    # 6 hours
+
+  sortMergedBAM:
+    mem_mb: 30720   # 30 GB
+    runtime: 360    # 3 hours
+
+  indexMergedBAM:
+    mem_mb: 5120    # 5 GB
+    runtime: 180    # 3 hours
+  
+  nanoPlot:
+    mem_mb: 40960   # 40 GB
+    runtime: 240    # 4 hours
+
+  clair3:
+    mem_mb: 81920   # 80 GB
+    runtime: 1440   # 24 hours
+
+  clair3CleanUp: 
+    mem_mb: 5120    # 5 GB
+    runtime: 30     # 30 minutes
+
+  renameClair3BAM:
+    mem_mb: 1024    # 1 GB
+    runtime: 10     # 10 minutes
+
+  updateTags:
+    mem_mb: 5120    # 5 GB
+    runtime: 360    # 6 hours
+
+  indexUpdatedBAM:
+    mem_mb: 10240   # 10 GB
+    runtime: 60     # 1 hour
+
+  modkitPileupFull:
+    mem_mb: 61440   # 60 GB
+    runtime: 360    # 6 hours
+
+  modkitPileupHaplotypes:
+    mem_mb: 61440   # 60 GB
+    runtime: 360    # 6 hours 
+
+  renameBedMethyls:
+    mem_mb: 1024    # 1 GB
+    runtime: 10     # 10 minutes
+
+  bgzipBedMethyl:
+    mem_mb: 5120    # 5 GB 
+    runtime: 120    # 2 hours
+
+  indexBedMethyl:
+    mem_mb: 5120    # 5 GB
+    runtime: 120    # 2 hours
+  
+  dmrPairSegment:
+    mem_mb: 24576   # 24 GB
+    runtime: 120    # 2 hours
+
+  bgzipDmrPairBed:
+    mem_mb: 5120    # 5 GB 
+    runtime: 120    # 2 hours
+
+  indexDmrPairBed:
+    mem_mb: 5120    # 5 GB
+    runtime: 120    # 2 hours
+
+  extractImprintRegions:
+    mem_mb: 10240   # 10 GB
+    runtime: 120    # 2 hours
+
+  nanoImprint:
+    mem_mb: 20480   # 20 GB
+    runtime: 120    # 2 hours
+
+  sniffles2:
+    mem_mb: 20480   # 20 GB
+    runtime: 120    # 2 hours
+
+  cuteSV:
+    mem_mb: 15360   # 15 GB
+    runtime: 120    # 2 hours
+
+  bgzipVCF:
+    mem_mb: 20480   # 20 GB
+    runtime: 240    # 4 hours
+
+  indexVCF:
+    mem_mb: 8192   # 8 GB
+    runtime: 60    # 1 hours
+
+  makeBlacklist:
+    mem_mb: 8192   # 8 GB
+    runtime: 60    # 1 hours
+
+  hifiCNV:
+    mem_mb: 16384   # 16 GB
+    runtime: 120    # 2 hours
+
+  hifiCNV_cleanup:
+    mem_mb: 1024    # 1 GB
+    runtime: 10     # 10 minutes
+
+  straglr:
+    mem_mb: 49152   # 48 GB
+    runtime: 240    # 4 hours
+
+  vcfrename:
+    mem_mb: 4096    # 1 GB
+    runtime: 10     # 10 minutes
+

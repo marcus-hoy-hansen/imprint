@@ -1,0 +1,247 @@
+---
+title: "NanoImprint_v2.0"
+date: "`r format(Sys.time(), '%d %b %Y')`"
+output: 
+  html_document:
+#params:
+#  SAMPLE: ""
+#  UNPHASED: ""
+#  H1: ""
+#  H2: ""
+#  CONTROL: ""
+#  REF: ""
+#  REGIONS: ""
+---
+
+#### Sample: **<span style="color:blue">`r snakemake@params[["sample"]]`</span>** \
+
+```{r include=FALSE}
+library(xlsx, warning(F))
+library(tidyverse, warning(F))
+require(gridExtra)
+library(ggplot2, warning(F))
+library(edgeR, warning(F))
+library(knitr)
+library(kableExtra)
+```
+
+
+
+```{r Import sample data, echo=FALSE}
+#Command line
+sample_df <- read.delim(snakemake@input[["full"]], header=F) %>%
+  filter(V4 == "m")
+hp1 <- read.delim(snakemake@input[["H1"]], header=F) %>%
+  filter(V4 == "m")
+hp2 <- read.delim(snakemake@input[["H2"]], header=F) %>%
+  filter(V4 == "m")
+```
+
+
+
+```{r Import control data, include=FALSE}
+#Command line
+ctrls= read.xlsx(snakemake@input[["control"]],1)
+ctrls<- ctrls [, c(2:5)]
+
+#dataset with selected cloumns
+sorted_df <- sample_df[,c(1,2,5,10,11,13,12,16)] %>% #I assume Nfilt is the same as Nfail. What is it used for? Can I maybe just exclude it?
+  mutate(across(!V1, as.numeric))
+colnames(sorted_df) <- c("chrom","start_position","score", "coverage", "methylation_frequency","canon", "mod", "fail")
+sorted_df$sum.modcalled <- sorted_df$canon + sorted_df$mod # add column with sum of the canonical calls and modified calls
+
+#dataset (hp1) with selected cloumns
+hp1 <- hp1[,c(1,2,5,10,11,13,12,16)] %>%
+  mutate(across(!V1, as.numeric))
+colnames(hp1) <- c("chrom","start_position","score", "coverage", "methylation_frequency","canon", "mod", "fail")
+hp1$sum.modcalled <- hp1$canon + hp1$mod
+
+#dataset (hp2) with selected cloumns
+hp2 <- hp2[,c(1,2,5,10,11,13,12,16)] %>%
+  mutate(across(!V1, as.numeric))
+colnames(hp2) <- c("chrom","start_position","score", "coverage", "methylation_frequency","canon", "mod", "fail")
+hp2$sum.modcalled <- hp2$canon + hp2$mod
+```
+
+
+
+```{r Import gene positions, include=FALSE}
+gene_pos <- read.delim(paste(snakemake@input[["regions"]]), header=F)
+colnames(gene_pos) <- c("chrom","start_position","end_position","gene_name","disorder","chrom_arm")
+```
+
+
+
+```{r Augment data, include=FALSE}
+# Initialize empty data frame for appending
+df = data.frame(matrix(nrow = 0, ncol = 11))
+
+# Get a list of all the gene names
+genes <- array(gene_pos$gene_name)
+
+for (g in genes) {
+  
+  # Gene position
+  d <- filter(gene_pos, gene_name == g)
+  g_chrom <- pull(d, chrom)
+  g_start <- pull(d, start_position)
+  g_end <- pull(d, end_position)
+  
+  # Extract all sample data for this gene
+  unphased_data <- filter(sorted_df, chrom == g_chrom & between(start_position, g_start, g_end))
+  hp1_data <- filter(hp1, chrom == g_chrom & between(start_position, g_start, g_end))
+  hp2_data <- filter(hp2, chrom == g_chrom & between(start_position, g_start, g_end))
+  
+  
+  # Get positions with a control mean between 40% and 60%. 
+  # These positions are more likely to be imprinted CpG positions
+  c <- ctrls %>%
+       filter(chrom == g_chrom & 
+              between(start_position, g_start, g_end) & 
+              between(methylation_frequency, 40, 60))
+  
+  # Extract those positions from sample data
+  unphased_data_filtered <- semi_join(unphased_data, c, by = c("chrom", "start_position"))
+  hp1_data_filtered <- semi_join(hp1_data, c, by = c("chrom", "start_position"))
+  hp2_data_filtered <- semi_join(hp2_data, c, by = c("chrom", "start_position"))
+  
+  
+  # Add to df to be printed in report
+  df <- df %>%
+         rbind(data.frame(d$disorder, 
+                          d$chrom_arm, 
+                          g, 
+                          paste(d$start_position, d$end_position, sep="-"), 
+                          nrow(unphased_data_filtered),
+                          round(mean(unphased_data$sum.modcalled),0), 
+                          round(mean(hp1_data$sum.modcalled),0), 
+                          round(mean(hp2_data$sum.modcalled),0),
+                          round(mean(unphased_data_filtered$methylation_frequency),1),
+                          round(mean(hp1_data_filtered$methylation_frequency),1),
+                          round(mean(hp2_data_filtered$methylation_frequency),1)))
+}
+
+colnames(df) <- c("Imprinting disorder",
+                  "Chr", 
+                  "Gene", 
+                  "Genomic coordinates", 
+                  "Number CpGs",
+                  "Mean coverage",
+                  "HP1 mean coverage",
+                  "HP2 mean coverage", 
+                  "Mean methylation (%)", 
+                  "HP1 mean methylation (%)",
+                  "HP2 mean methylation (%)")
+
+
+
+df <- df %>%
+  mutate(across(everything(), as.character)) %>%
+  kable("html", escape = FALSE) %>%
+  kable_styling() %>%
+  # Highlight mean methylation below 25% and over 75% (and not NaN)
+  column_spec(9, 
+              color = ifelse(!is.na(df$"Mean methylation") & df$"Mean methylation" < 25 | !is.na(df$"Mean methylation") & df$"Mean methylation" > 75, "red", "black"),
+              bold = ifelse(!is.na(df$"Mean methylation") & df$"Mean methylation" < 25 | !is.na(df$"Mean methylation") & df$"Mean methylation" > 75, TRUE, FALSE))
+```
+
+
+
+```{r print data frame, echo=FALSE}
+df 
+```
+
+
+
+```{r Plot functions, echo=FALSE}
+###################################
+# Function for creating plot from unphased data
+plot_unphased = function(g, g_chrom, g_start, g_end) {
+  
+  # Extract data for gene
+  unphased_data <- filter(sorted_df, chrom == g_chrom & between(start_position, g_start, g_end))
+  ctrl_data <- filter(ctrls, chrom == g_chrom & between(start_position, g_start, g_end))
+  
+  # If data frame is not empty; make plot
+  if (nrow(unphased_data) > 0) {
+    ggplot(data = unphased_data, aes(x = start_position, group = 1, se = F)) +
+    geom_smooth(aes(y = methylation_frequency), colour = "black", se = F) +
+    geom_point(aes(y = methylation_frequency), colour = "black", alpha = 0.3) +
+    geom_ribbon(data = ctrl_data, aes(ymin = methylation_frequency - sd, ymax = methylation_frequency + sd), alpha = 0.2) +
+    geom_ribbon(data = ctrl_data, aes(ymin = methylation_frequency - 1.5*sd, ymax = methylation_frequency + 0.1*sd), alpha = 0.1) + 
+    labs(x = "Position on chromosome",
+         y = "Methylation frequency (%)", 
+         title = paste("Unphased: ", g, sep ="")) +
+    coord_cartesian(xlim = c(g_start, g_end), ylim = c(-5,105), expand = F) + 
+    theme_light() +
+    theme(text = element_text(size = 15))
+    # Empty data frame; make empty plot
+  } else {
+    ggplot() + 
+      geom_blank() +
+      labs(x = "Position on chromosome",
+           y = "Methylation frequency (%)", 
+           title = paste("Unphased: ", g, sep ="")) +
+      coord_cartesian(xlim = c(g_start, g_end), ylim = c(-5,105), expand = F) + 
+      theme_light() +
+      theme(text = element_text(size = 15))
+  }
+}
+
+
+
+
+###################################
+# Function to create plot from phased data
+plot_phased <- function(g, g_chrom, g_start, g_end) {
+  
+  # Extract data for gene
+  hp1_data <- filter(hp1, chrom == g_chrom & between(start_position, g_start, g_end))
+  hp2_data <- filter(hp2, chrom == g_chrom & between(start_position, g_start, g_end))
+  
+  # If data frame is not empty; make plot
+  if (nrow(hp1_data) > 0 && nrow(hp2_data) > 0) {
+    ggplot() +
+        geom_smooth(data = hp1_data, aes(x = start_position, y = methylation_frequency), colour = "red", se = F) + 
+        geom_point(data = hp1_data, aes(x = start_position, y = methylation_frequency), colour = "red", alpha = 0.3) +
+        geom_smooth(data = hp2_data, aes(x = start_position, y = methylation_frequency), colour = "blue", se = F) + 
+        geom_point(data = hp2_data, aes(x = start_position, y = methylation_frequency), colour = "blue", alpha = 0.3) +
+        labs(x = "Position on chromosome",
+             y = "Methylation frequency (%)", 
+             title = paste("Phased: ", g, sep ="")) +
+        coord_cartesian(xlim = c(g_start, g_end), ylim = c(-5,105), expand = F) + 
+        theme_light() +
+        theme(text = element_text(size = 15))  
+  # Empty data frame; make empty plot
+  } else {
+    ggplot() + 
+      geom_blank() +
+      labs(x = "Position on chromosome",
+           y = "Methylation frequency (%)", 
+           title = paste("Phased: ", g, sep ="")) +
+      coord_cartesian(xlim = c(g_start, g_end), ylim = c(-5,105), expand = F) + 
+      theme_light() +
+      theme(text = element_text(size = 15)) 
+  }
+}
+```
+
+
+## Visualization of methylation at imprinted regions
+In the left side each imprinted region is shown with methylation frequency (%). Grey shaded regions mark mean $\pm$ 1 SD (darker grey) and $\pm$ 1.5 SD (lighter grey) for control samples. Haplotype phased methylation frequencies for the regions are seen to the right. HP1 is **<span style="color:red">red</span>** and HP2 is **<span style="color:blue">blue</span>**. If plots are empty phasing was not successful. 
+
+
+```{r, fig.show="hold", out.width="50%", echo=FALSE, message=FALSE}
+for (g in genes){
+  d <- filter(gene_pos, gene_name == g)
+  g_chrom <- pull(d, chrom)
+  g_start <- pull(d, start_position)
+  g_end <- pull(d, end_position)
+  
+  p1 <- plot_unphased(g, g_chrom, g_start, g_end)
+  p2 <- plot_phased(g, g_chrom, g_start, g_end)
+  
+  print(p1)
+  print(p2)
+}
+```

@@ -1,0 +1,51 @@
+files, = glob_wildcards(f"{config['inputDir']}{{file}}.bam")
+
+
+rule all:
+    input:
+        expand("{outputDir}mapped/{file}.bam", file=files, outputDir=config["outputDir"]),
+
+
+
+# Unmap bam files
+rule unmapBAM:
+    input:
+        lambda wildcards: f"{config['inputDir']}{wildcards.file}.bam"
+    output:
+        temp("{outputDir}unMapped/{file}_unMapped.bam")
+    conda:
+        "../envs/picard_env.yaml"
+    threads: 1
+    resources:
+        mem_mb=32768,
+        runtime=120
+    params:
+        picardSource = config["picard"]
+    shell:
+       "java -Xmx100G -jar {params.picardSource} RevertSam "
+       "I={input} "
+       "O={output} "
+       "VALIDATION_STRINGENCY=SILENT "
+       "TMP_DIR={wildcards.outputDir}unMapped/tmp"
+
+
+# Align unmapped BAM to given reference
+rule alignBAM:
+    input:
+        unmappedBAM = "{outputDir}unMapped/{file}_unMapped.bam",
+        ref = config["refFile"]
+    output:
+        "{outputDir}mapped/{file}.bam"
+    threads: 32
+    resources:
+        mem_mb=32768,
+        runtime=120
+    params:
+        doradoSource = config["dorado"]
+    shell:
+        "{params.doradoSource} aligner "
+        "{input.ref} "
+        "{input.unmappedBAM} "
+        "--threads {threads} "
+        "> {output}"
+
