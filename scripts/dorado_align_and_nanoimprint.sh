@@ -44,7 +44,8 @@ else
 fi
 
 # START NANO
-NANODIR="/faststorage/project/nanopore_kga/analysis/${SAMPLE}/data/raw/"
+ANALYSIS_BASE="${NP_ANALYSIS_DIR:-/faststorage/project/nanopore_kga/analysis}"
+NANODIR="${ANALYSIS_BASE}/${SAMPLE}/data/raw/"
 
 mkdir -p "$NANODIR"
 

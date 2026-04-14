@@ -14,8 +14,9 @@ SUBMIT_HOST="$5"
 HOST="$6"
 REMOTE_SCRIPT="$7"
 MARKER_OUT="$8"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TMUX_SESSION="varseq_${SAMPLE}"
-SUBMIT_SCRIPT="/faststorage/project/nanopore_kga/workflow_dev/scripts/submit_varseq.sh"
+SUBMIT_SCRIPT="${SCRIPT_DIR}/submit_varseq.sh"
 
 mkdir -p "$(dirname "$MARKER_OUT")"
 

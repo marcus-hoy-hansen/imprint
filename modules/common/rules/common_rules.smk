@@ -1,3 +1,7 @@
+analysis_dir = config["analysisDir"]
+ANALYSIS = analysis_dir + "/{sample}"
+WILDCARD_ANALYSIS = analysis_dir + "/{wildcards.sample}"
+
 # Rules that are used in both AS and WGS pipeline
 
 
@@ -9,22 +13,22 @@
 # Create list of all intermediate BAM files from sequencing
 rule BAMlist:
   output:
-    temp("../analysis/{sample}/data/bamlist.txt")
+    temp(ANALYSIS + "/data/bamlist.txt")
   message:
     "Creating list of bam files to be merged: {wildcards.sample}"
   params:
-    rawDir = "../analysis/{sample}/data/raw"
+    rawDir = ANALYSIS + "/data/raw"
   shell:
-    "ls -d $PWD/{params.rawDir}/*.* | grep '.bam' | grep -v '.bai' > {output}"
+    "ls -d {params.rawDir}/*.* | grep '.bam' | grep -v '.bai' > {output}"
 
 
 
 # Merge intermediate BAM files
 rule mergeBAMs:
   input:
-    "../analysis/{sample}/data/bamlist.txt"
+    ANALYSIS + "/data/bamlist.txt"
   output:
-    temp("../analysis/{sample}/data/{sample}_unSorted.bam")
+    temp(ANALYSIS + "/data/{sample}_unSorted.bam")
   message:
     "Merging BAMs: {wildcards.sample}"
   conda:
@@ -40,9 +44,9 @@ rule mergeBAMs:
 # Sort merged BAM
 rule sortMergedBAM:
   input:
-    "../analysis/{sample}/data/{sample}_unSorted.bam"
+    ANALYSIS + "/data/{sample}_unSorted.bam"
   output:
-    protected("../analysis/{sample}/data/{sample}.bam")
+    protected(ANALYSIS + "/data/{sample}.bam")
   message:
     "Sorting BAM: {wildcards.sample}"
   conda:
@@ -58,9 +62,9 @@ rule sortMergedBAM:
 # Index merged BAM
 rule indexMergedBAM:
   input:
-    "../analysis/{sample}/data/{sample}.bam"
+    ANALYSIS + "/data/{sample}.bam"
   output:
-    protected("../analysis/{sample}/data/{sample}.bam.bai")
+    protected(ANALYSIS + "/data/{sample}.bam.bai")
   message:  
     "Indexing {input}"
   conda:
@@ -78,11 +82,11 @@ rule indexMergedBAM:
 
 rule nanoPlot:
   input:
-    bam = "../analysis/{sample}/data/{sample}.bam",
-    bai = "../analysis/{sample}/data/{sample}.bam.bai"
+    bam = ANALYSIS + "/data/{sample}.bam",
+    bai = ANALYSIS + "/data/{sample}.bam.bai"
   output:
-    outDir = directory("../analysis/{sample}/QC"),
-    html = "../analysis/{sample}/QC/{sample}_NanoPlot-report.html"
+    outDir = directory(ANALYSIS + "/QC"),
+    html = ANALYSIS + "/QC/{sample}_NanoPlot-report.html"
   message:  
     "NanoPlot: {wildcards.sample}"
   conda:
@@ -105,20 +109,20 @@ rule nanoPlot:
 # Run Clair3
 rule clair3:
   input:
-    bam = "../analysis/{sample}/data/{sample}.bam",
-    bai = "../analysis/{sample}/data/{sample}.bam.bai",
+    bam = ANALYSIS + "/data/{sample}.bam",
+    bai = ANALYSIS + "/data/{sample}.bam.bai",
     ref = expand("{referenceDir}/{reference}", referenceDir=config["referenceDir"], reference=config["refFile"])
   output:
-    vcf = "../analysis/{sample}/variants/phased_merge_output.vcf.gz",
-    tbi = "../analysis/{sample}/variants/phased_merge_output.vcf.gz.tbi",
-    bam = "../analysis/{sample}/variants/phased_output.bam",
-    bai = "../analysis/{sample}/variants/phased_output.bam.bai"
+    vcf = ANALYSIS + "/variants/phased_merge_output.vcf.gz",
+    tbi = ANALYSIS + "/variants/phased_merge_output.vcf.gz.tbi",
+    bam = ANALYSIS + "/variants/phased_output.bam",
+    bai = ANALYSIS + "/variants/phased_output.bam.bai"
   message:
     "Clair3: {wildcards.sample}"
   conda:
     "../../../envs/clair3.yaml"
   params:
-    "--output=../analysis/{sample}/variants/",
+    lambda wildcards: f"--output={analysis_dir}/{wildcards.sample}/variants/",
     "--include_all_ctgs",
     "--platform='ont'",
     "--use_whatshap_for_final_output_haplotagging",
@@ -136,15 +140,15 @@ rule clair3:
 # Rename, move and delete files
 rule clair3CleanUp:
   input:
-    bam = "../analysis/{sample}/variants/phased_output.bam",
-    bai = "../analysis/{sample}/variants/phased_output.bam.bai",
-    vcf = "../analysis/{sample}/variants/phased_merge_output.vcf.gz",
-    tbi = "../analysis/{sample}/variants/phased_merge_output.vcf.gz.tbi"
+    bam = ANALYSIS + "/variants/phased_output.bam",
+    bai = ANALYSIS + "/variants/phased_output.bam.bai",
+    vcf = ANALYSIS + "/variants/phased_merge_output.vcf.gz",
+    tbi = ANALYSIS + "/variants/phased_merge_output.vcf.gz.tbi"
   output:
-    bam = protected("../analysis/{sample}/data/{sample}.haplotagged.bam"),
-    bai = protected("../analysis/{sample}/data/{sample}.haplotagged.bam.bai"),
-    vcf = protected("../analysis/{sample}/variants/{sample}_clair3.vcf.gz"),
-    tbi = protected("../analysis/{sample}/variants/{sample}_clair3.vcf.gz.tbi")
+    bam = protected(ANALYSIS + "/data/{sample}.haplotagged.bam"),
+    bai = protected(ANALYSIS + "/data/{sample}.haplotagged.bam.bai"),
+    vcf = protected(ANALYSIS + "/variants/{sample}_clair3.vcf.gz"),
+    tbi = protected(ANALYSIS + "/variants/{sample}_clair3.vcf.gz.tbi")
   message:
     "Cleaning up files after variant calling"
   shell:
@@ -152,11 +156,11 @@ rule clair3CleanUp:
     "&& mv {input.bai} {output.bai} "
     "&& mv {input.vcf} {output.vcf} "
     "&& mv {input.tbi} {output.tbi} "
-    "&& mkdir -p ../analysis/{wildcards.sample}/logs && mv ../analysis/{wildcards.sample}/variants/log ../analysis/{wildcards.sample}/logs/clair3 "
-    "; mkdir -p ../analysis/{wildcards.sample}/logs/clair3 && mv ../analysis/{wildcards.sample}/variants/run_clair3.log ../analysis/{wildcards.sample}/logs/clair3/run_clair3.log "
-    "; rm ../analysis/{wildcards.sample}/variants/full_alignment.vcf.gz* "
-    "; rm ../analysis/{wildcards.sample}/variants/pileup.vcf.gz* "
-    "; rm ../analysis/{wildcards.sample}/variants/merge_output.vcf.gz*"
+    f"&& mkdir -p {analysis_dir}/{{wildcards.sample}}/logs && mv {analysis_dir}/{{wildcards.sample}}/variants/log {analysis_dir}/{{wildcards.sample}}/logs/clair3 "
+    f"; mkdir -p {analysis_dir}/{{wildcards.sample}}/logs/clair3 && mv {analysis_dir}/{{wildcards.sample}}/variants/run_clair3.log {analysis_dir}/{{wildcards.sample}}/logs/clair3/run_clair3.log "
+    f"; rm {analysis_dir}/{{wildcards.sample}}/variants/full_alignment.vcf.gz* "
+    f"; rm {analysis_dir}/{{wildcards.sample}}/variants/pileup.vcf.gz* "
+    f"; rm {analysis_dir}/{{wildcards.sample}}/variants/merge_output.vcf.gz*"
 
 
 
@@ -167,15 +171,15 @@ rule clair3CleanUp:
 # Update MM tags in imprint BAM
 rule updateTags:
   input:
-    bam = "../analysis/{sample}/data/{sample}.haplotagged.bam",
-    bai = "../analysis/{sample}/data/{sample}.haplotagged.bam.bai"
+    bam = ANALYSIS + "/data/{sample}.haplotagged.bam",
+    bai = ANALYSIS + "/data/{sample}.haplotagged.bam.bai"
   output:
-    temp("../analysis/{sample}/methylation/{sample}.haplotagged.updated.bam")
+    temp(ANALYSIS + "/methylation/{sample}.haplotagged.updated.bam")
   message:
     "Updating tags in {input.bam}"
   params:
     mode = "--mode implicit",
-    log = "--log-filepath ../analysis/{sample}/logs/modkit/{sample}_updateTags.log",
+    log = lambda wildcards: f"--log-filepath {analysis_dir}/{wildcards.sample}/logs/modkit/{wildcards.sample}_updateTags.log",
     modkit = expand("{softwareDir}/modkit_{version}/modkit", softwareDir=config["softwareDir"], version=config["modkitVersion"])
   shell:
     "{params.modkit} update-tags "
@@ -189,9 +193,9 @@ rule updateTags:
 # Index imprint BAM with updated tags
 rule indexUpdatedBAM:
   input:
-    "../analysis/{sample}/methylation/{sample}.haplotagged.updated.bam"
+    ANALYSIS + "/methylation/{sample}.haplotagged.updated.bam"
   output:
-    temp("../analysis/{sample}/methylation/{sample}.haplotagged.updated.bam.bai")
+    temp(ANALYSIS + "/methylation/{sample}.haplotagged.updated.bam.bai")
   message:
     "Indexing {input}"
   conda:
@@ -209,16 +213,16 @@ rule indexUpdatedBAM:
 # Run Modkit on BAM file to create bedMethtyl file
 rule modkitPileupFull:
   input:
-    bam = "../analysis/{sample}/methylation/{sample}.haplotagged.updated.bam",
-    bai = "../analysis/{sample}/methylation/{sample}.haplotagged.updated.bam.bai",
+    bam = ANALYSIS + "/methylation/{sample}.haplotagged.updated.bam",
+    bai = ANALYSIS + "/methylation/{sample}.haplotagged.updated.bam.bai",
     ref = expand("{referenceDir}/{reference}", referenceDir=config["referenceDir"], reference=config["refFile"])
   output:
-    bed = "../analysis/{sample}/methylation/{sample}_full_pileup.bed"
+    bed = ANALYSIS + "/methylation/{sample}_full_pileup.bed"
   message:
     "Modkit pileup: {wildcards.sample}"
   params:
     preset = "--preset traditional",
-    log = "--log-filepath ../analysis/{sample}/logs/modkit/{sample}_full_pileup.log",
+    log = lambda wildcards: f"--log-filepath {analysis_dir}/{wildcards.sample}/logs/modkit/{wildcards.sample}_full_pileup.log",
     thresh = expand("--filter-threshold {threshold}", threshold=config["modkitThreshold"])[0],
     modkit = expand("{softwareDir}/modkit_{version}/modkit", softwareDir=config["softwareDir"], version=config["modkitVersion"])
   shell:
@@ -236,19 +240,19 @@ rule modkitPileupFull:
 # Run Modkit on haplo-specific BAMs to create haplotype-specific bedMethyl files
 rule modkitPileupHaplotypes:
   input:
-    bam = "../analysis/{sample}/methylation/{sample}.haplotagged.updated.bam",
-    bai = "../analysis/{sample}/methylation/{sample}.haplotagged.updated.bam.bai",
+    bam = ANALYSIS + "/methylation/{sample}.haplotagged.updated.bam",
+    bai = ANALYSIS + "/methylation/{sample}.haplotagged.updated.bam.bai",
     ref = expand("{referenceDir}/{reference}", referenceDir=config["referenceDir"], reference=config["refFile"])
   output:
-    hap1 = "../analysis/{sample}/methylation/haplotypeOutput/{sample}_pileup_1.bed",
-    hap2 = "../analysis/{sample}/methylation/haplotypeOutput/{sample}_pileup_2.bed",
-    unHap = "../analysis/{sample}/methylation/haplotypeOutput/{sample}_pileup_ungrouped.bed"
+    hap1 = ANALYSIS + "/methylation/haplotypeOutput/{sample}_pileup_1.bed",
+    hap2 = ANALYSIS + "/methylation/haplotypeOutput/{sample}_pileup_2.bed",
+    unHap = ANALYSIS + "/methylation/haplotypeOutput/{sample}_pileup_ungrouped.bed"
   message:
     "Modkit pileup: {wildcards.sample}"
   params:
-    outDir = "../analysis/{sample}/methylation/haplotypeOutput",
+    outDir = ANALYSIS + "/methylation/haplotypeOutput",
     preset = "--preset traditional",
-    log = "--log-filepath ../analysis/{sample}/logs/modkit/{sample}_haplotypes_pileup.log",
+    log = lambda wildcards: f"--log-filepath {analysis_dir}/{wildcards.sample}/logs/modkit/{wildcards.sample}_haplotypes_pileup.log",
     thresh = expand("--filter-threshold {threshold}", threshold=config["modkitThreshold"])[0],
     modkit = expand("{softwareDir}/modkit_{version}/modkit", softwareDir=config["softwareDir"], version=config["modkitVersion"]),
     prefix = "--prefix {sample}_pileup",
@@ -270,13 +274,13 @@ rule modkitPileupHaplotypes:
 # Rename bedMethyls
 rule renameBedMethyls:
   input:
-    hap1 = "../analysis/{sample}/methylation/haplotypeOutput/{sample}_pileup_1.bed",
-    hap2 = "../analysis/{sample}/methylation/haplotypeOutput/{sample}_pileup_2.bed",
-    ungrouped = "../analysis/{sample}/methylation/haplotypeOutput/{sample}_pileup_ungrouped.bed"
+    hap1 = ANALYSIS + "/methylation/haplotypeOutput/{sample}_pileup_1.bed",
+    hap2 = ANALYSIS + "/methylation/haplotypeOutput/{sample}_pileup_2.bed",
+    ungrouped = ANALYSIS + "/methylation/haplotypeOutput/{sample}_pileup_ungrouped.bed"
   output:
-    hap1 = temp("../analysis/{sample}/methylation/{sample}_hap1_pileup.bed"),
-    hap2 = temp("../analysis/{sample}/methylation/{sample}_hap2_pileup.bed"),
-    ungrouped = temp("../analysis/{sample}/methylation/{sample}_unHap_pileup.bed")
+    hap1 = temp(ANALYSIS + "/methylation/{sample}_hap1_pileup.bed"),
+    hap2 = temp(ANALYSIS + "/methylation/{sample}_hap2_pileup.bed"),
+    ungrouped = temp(ANALYSIS + "/methylation/{sample}_unHap_pileup.bed")
   message: 
     "Renaming output files from modkit pileup"
   shell:
@@ -289,9 +293,9 @@ rule renameBedMethyls:
 # Bgzip bedMethyl files
 rule bgzipBedMethyl:
   input:
-    "../analysis/{sample}/methylation/{sample}_{haplotype}_pileup.bed"
+    ANALYSIS + "/methylation/{sample}_{haplotype}_pileup.bed"
   output:
-    protected("../analysis/{sample}/methylation/{sample}_{haplotype}_pileup.bed.gz")
+    protected(ANALYSIS + "/methylation/{sample}_{haplotype}_pileup.bed.gz")
   message:
     "Bgzipping {input}"
   conda:
@@ -306,9 +310,9 @@ rule bgzipBedMethyl:
 # Index bedMethyl files
 rule indexBedMethyl:
   input:
-    "../analysis/{sample}/methylation/{sample}_{haplotype}_pileup.bed.gz"
+    ANALYSIS + "/methylation/{sample}_{haplotype}_pileup.bed.gz"
   output:
-    protected("../analysis/{sample}/methylation/{sample}_{haplotype}_pileup.bed.gz.tbi")
+    protected(ANALYSIS + "/methylation/{sample}_{haplotype}_pileup.bed.gz.tbi")
   message:
     "Indexing {input}"
   conda:
@@ -330,11 +334,11 @@ rule indexBedMethyl:
 # Extract imprinting regions from 
 rule extractImprintRegions:
   input:
-    a = "../analysis/{sample}/methylation/{sample}_{haplotype}_pileup.bed.gz",
-    tbi = "../analysis/{sample}/methylation/{sample}_{haplotype}_pileup.bed.gz.tbi",
+    a = ANALYSIS + "/methylation/{sample}_{haplotype}_pileup.bed.gz",
+    tbi = ANALYSIS + "/methylation/{sample}_{haplotype}_pileup.bed.gz.tbi",
     b = expand("{dataDir}/nanoImprintRegions_{reference}.bed", dataDir=config["dataDir"], reference=config["refGenome"])
   output:
-    temp("../analysis/{sample}/methylation/{sample}_{haplotype}_pileup_imprintGenes.bed")
+    temp(ANALYSIS + "/methylation/{sample}_{haplotype}_pileup_imprintGenes.bed")
   message:
     "Extracting imprinting genes from bedMethyl files: {wildcards.sample}"
   conda:
@@ -353,13 +357,13 @@ rule extractImprintRegions:
 # Imprinting gene analysis with NanoImprint
 rule nanoImprint:
   input:
-    H1 = "../analysis/{sample}/methylation/{sample}_hap1_pileup_imprintGenes.bed",
-    H2 = "../analysis/{sample}/methylation/{sample}_hap2_pileup_imprintGenes.bed",
-    full = "../analysis/{sample}/methylation/{sample}_full_pileup_imprintGenes.bed",
+    H1 = ANALYSIS + "/methylation/{sample}_hap1_pileup_imprintGenes.bed",
+    H2 = ANALYSIS + "/methylation/{sample}_hap2_pileup_imprintGenes.bed",
+    full = ANALYSIS + "/methylation/{sample}_full_pileup_imprintGenes.bed",
     control = expand("{dataDir}/ctrls_{ref}_wChr.xlsx", dataDir=config["dataDir"], ref=config["refGenome"]),
     regions = expand("{dataDir}/nanoImprintRegions_{ref}.bed", dataDir=config["dataDir"], ref=config["refGenome"])
   output:
-    "../analysis/{sample}/methylation/{sample}_NanoImprint_v2.0.html"
+    ANALYSIS + "/methylation/{sample}_NanoImprint_v2.0.html"
   message:
     "NanoImprint: {wildcards.sample} "
   conda:
@@ -379,20 +383,20 @@ rule nanoImprint:
 # Modkit DMR pair segment
 rule dmrPairSegment:
   input:
-    bed = "../analysis/{sample}/methylation/{sample}_full_pileup.bed.gz",
-    tbi = "../analysis/{sample}/methylation/{sample}_full_pileup.bed.gz.tbi",
+    bed = ANALYSIS + "/methylation/{sample}_full_pileup.bed.gz",
+    tbi = ANALYSIS + "/methylation/{sample}_full_pileup.bed.gz.tbi",
     ref = expand("{referenceDir}/{reference}", referenceDir=config["referenceDir"], reference=config["refFile"]),
     normal1 = expand("{dataDir}/dmrNormals/1036-24_{ref}.bed.gz", dataDir=config["dataDir"], ref=config["refGenome"]),
     normal2 = expand("{dataDir}/dmrNormals/2673-24_{ref}.bed.gz", dataDir=config["dataDir"], ref=config["refGenome"]),
   output:
-    bed = temp("../analysis/{sample}/methylation/DMR/{sample}_dmrPair_perCpG.bed"),
-    segments = temp("../analysis/{sample}/methylation/DMR/{sample}_dmrPair_segments.bed")
+    bed = temp(ANALYSIS + "/methylation/DMR/{sample}_dmrPair_perCpG.bed"),
+    segments = temp(ANALYSIS + "/methylation/DMR/{sample}_dmrPair_segments.bed")
   params:
     header = "--header",
     force = "--force",
     base = "C",
     batchSize = "32",
-    log = "../analysis/{sample}/logs/modkit/{sample}_dmrPair.log",
+    log = ANALYSIS + "/logs/modkit/{sample}_dmrPair.log",
     sigFac = expand("{sigFac}", sigFac=config["significanceFactor"]),
     minCov = expand("{minCov}", minCov=config["minimumCoverage"]),
     modkit = expand("{softwareDir}/modkit_{version}/modkit", softwareDir=config["softwareDir"], version=config["modkitVersion"])
@@ -418,9 +422,9 @@ rule dmrPairSegment:
 # Bgzip bedMethyl files (sort first or indexing will fail)
 rule bgzipDmrPairBed:
   input:
-    "../analysis/{sample}/methylation/DMR/{sample}_dmrPair_{X}.bed"
+    ANALYSIS + "/methylation/DMR/{sample}_dmrPair_{X}.bed"
   output:
-    "../analysis/{sample}/methylation/DMR/{sample}_dmrPair_{X}.bed.gz"
+    ANALYSIS + "/methylation/DMR/{sample}_dmrPair_{X}.bed.gz"
   message:
     "Bgzipping {input}"
   conda:
@@ -435,9 +439,9 @@ rule bgzipDmrPairBed:
 # Index bedMethyl files
 rule indexDmrPairBed:
   input:
-    "../analysis/{sample}/methylation/DMR/{sample}_dmrPair_{X}.bed.gz"
+    ANALYSIS + "/methylation/DMR/{sample}_dmrPair_{X}.bed.gz"
   output:
-    "../analysis/{sample}/methylation/DMR/{sample}_dmrPair_{X}.bed.gz.tbi"
+    ANALYSIS + "/methylation/DMR/{sample}_dmrPair_{X}.bed.gz.tbi"
   message:
     "Indexing {input}"
   conda:
@@ -459,11 +463,11 @@ rule indexDmrPairBed:
 # Run Sniffles2
 rule sniffles2:
   input:
-    bam = "../analysis/{sample}/data/{sample}.bam",
-    bai = "../analysis/{sample}/data/{sample}.bam.bai",
+    bam = ANALYSIS + "/data/{sample}.bam",
+    bai = ANALYSIS + "/data/{sample}.bam.bai",
     ref = expand("{referenceDir}/{reference}", referenceDir=config["referenceDir"], reference=config["refFile"])
   output:
-    vcf = protected("../analysis/{sample}/structural_variation/{sample}_sniffles2.vcf.gz")
+    vcf = protected(ANALYSIS + "/structural_variation/{sample}_sniffles2.vcf.gz")
   message:
     "Sniffles2: {wildcards.sample} "
   conda:
@@ -479,12 +483,12 @@ rule sniffles2:
 # Run cuteSV
 rule cuteSV:
   input:
-    bam = "../analysis/{sample}/data/{sample}.bam",
-    bai = "../analysis/{sample}/data/{sample}.bam.bai",
+    bam = ANALYSIS + "/data/{sample}.bam",
+    bai = ANALYSIS + "/data/{sample}.bam.bai",
     ref = expand("{referenceDir}/{reference}", referenceDir=config["referenceDir"], reference=config["refFile"])
   output:
-    vcf = "../analysis/{sample}/structural_variation/{sample}_cuteSV.vcf",
-    workDir = temp(directory("../analysis/{sample}/structural_variation/tmp"))
+    vcf = ANALYSIS + "/structural_variation/{sample}_cuteSV.vcf",
+    workDir = temp(directory(ANALYSIS + "/structural_variation/tmp"))
   message:
     "CuteSV: {wildcards.sample} "
   conda:
@@ -513,9 +517,9 @@ rule cuteSV:
 # Bgzip cuteSV output vcf
 rule bgzipVCF:
   input:
-    "../analysis/{sample}/structural_variation/{sample}_cuteSV.vcf"
+    ANALYSIS + "/structural_variation/{sample}_cuteSV.vcf"
   output:
-    protected("../analysis/{sample}/structural_variation/{sample}_cuteSV.vcf.gz")
+    protected(ANALYSIS + "/structural_variation/{sample}_cuteSV.vcf.gz")
   message:
     "Bgzipping CuteSV VCF file: {wildcards.sample}"
   conda:
@@ -530,9 +534,9 @@ rule bgzipVCF:
 # Index cuteSV output vcf
 rule indexVCF:
   input:
-    "../analysis/{sample}/structural_variation/{sample}_cuteSV.vcf.gz"
+    ANALYSIS + "/structural_variation/{sample}_cuteSV.vcf.gz"
   output:
-    protected("../analysis/{sample}/structural_variation/{sample}_cuteSV.vcf.gz.tbi")
+    protected(ANALYSIS + "/structural_variation/{sample}_cuteSV.vcf.gz.tbi")
   message:
     "Indexing CuteSV VCF file: {wildcards.sample}"
   conda:
@@ -554,15 +558,15 @@ rule indexVCF:
 # Clean up after hifiCNV
 rule hifiCNV_cleanup:
   input:
-    bedgraph = "../analysis/{sample}/CNV/{sample}_hifiCNV.Sample0.copynum.bedgraph",
-    depth_bw = "../analysis/{sample}/CNV/{sample}_hifiCNV.Sample0.depth.bw",
-    vcf = "../analysis/{sample}/CNV/{sample}_hifiCNV.Sample0.vcf.gz",
-    maf_bw = "../analysis/{sample}/CNV/{sample}_hifiCNV.SAMPLE.maf.bw"
+    bedgraph = ANALYSIS + "/CNV/{sample}_hifiCNV.Sample0.copynum.bedgraph",
+    depth_bw = ANALYSIS + "/CNV/{sample}_hifiCNV.Sample0.depth.bw",
+    vcf = ANALYSIS + "/CNV/{sample}_hifiCNV.Sample0.vcf.gz",
+    maf_bw = ANALYSIS + "/CNV/{sample}_hifiCNV.SAMPLE.maf.bw"
   output:
-    bedgraph = "../analysis/{sample}/CNV/{sample}_hifiCNV.copynum.bedgraph",
-    depth_bw = "../analysis/{sample}/CNV/{sample}_hifiCNV.depth.bw",
-    vcf = "../analysis/{sample}/CNV/{sample}_hifiCNV.vcf.gz",
-    maf_bw = "../analysis/{sample}/CNV/{sample}_hifiCNV.maf.bw"
+    bedgraph = ANALYSIS + "/CNV/{sample}_hifiCNV.copynum.bedgraph",
+    depth_bw = ANALYSIS + "/CNV/{sample}_hifiCNV.depth.bw",
+    vcf = ANALYSIS + "/CNV/{sample}_hifiCNV.vcf.gz",
+    maf_bw = ANALYSIS + "/CNV/{sample}_hifiCNV.maf.bw"
   message:
     "Cleaning up after hifiCNV: {wildcards.sample}"
   shell:
@@ -580,19 +584,19 @@ rule hifiCNV_cleanup:
 # Run straglr
 rule straglr:
   input:
-    bam = "../analysis/{sample}/data/{sample}.bam",
-    bai = "../analysis/{sample}/data/{sample}.bam.bai",
+    bam = ANALYSIS + "/data/{sample}.bam",
+    bai = ANALYSIS + "/data/{sample}.bam.bai",
     ref = expand("{referenceDir}/{reference}", referenceDir=config["referenceDir"], reference=config["refFile"])
   output:
-    "../analysis/{sample}/STR/{sample}_straglr.bed",
-    "../analysis/{sample}/STR/{sample}_straglr.tsv",
-    "../analysis/{sample}/STR/{sample}_straglr.vcf"
+    ANALYSIS + "/STR/{sample}_straglr.bed",
+    ANALYSIS + "/STR/{sample}_straglr.tsv",
+    ANALYSIS + "/STR/{sample}_straglr.vcf"
   message:
     "Straglr: {wildcards.sample}"
   conda:
     "../../../envs/straglr.yaml"
   params:
-    prefix = "../analysis/{sample}/STR/{sample}_straglr",
+    prefix = ANALYSIS + "/STR/{sample}_straglr",
     sample = "--sample {sample}",
     chroms = "--include_alt_chroms"
   shell:
@@ -613,11 +617,11 @@ rule straglr:
 
 rule vcfrename:
   input:
-    vcfclair = "../analysis/{sample}/variants/{sample}_clair3.vcf.gz",
-    vcfhifi = "../analysis/{sample}/CNV/{sample}_hifiCNV.vcf.gz"
+    vcfclair = ANALYSIS + "/variants/{sample}_clair3.vcf.gz",
+    vcfhifi = ANALYSIS + "/CNV/{sample}_hifiCNV.vcf.gz"
   output:
-    vcfclair = "../analysis/{sample}/renamed_vcfs/variants_{sample}_clair3.vcf.gz",
-    vcfhifi = "../analysis/{sample}/renamed_vcfs/CNV_{sample}_hifiCNV.vcf.gz"
+    vcfclair = ANALYSIS + "/renamed_vcfs/variants_{sample}_clair3.vcf.gz",
+    vcfhifi = ANALYSIS + "/renamed_vcfs/CNV_{sample}_hifiCNV.vcf.gz"
   message:
     "Renaming VCF-header: {wildcards.sample} "
   conda:
@@ -629,7 +633,7 @@ rule vcfrename:
     "echo 'Output sample:' ; "
     "echo '{output.vcfclair}' ; "
     "echo '{output.vcfhifi}' ; "
-    "scripts/rename_sample_name_VCF_recursive.sh ../analysis/{wildcards.sample} {wildcards.sample} ; "
+    f"scripts/rename_sample_name_VCF_recursive.sh {analysis_dir}/{{wildcards.sample}} {{wildcards.sample}} ; "
 
 
 ##################################################
@@ -638,9 +642,9 @@ rule vcfrename:
 
 rule varseqProject:
   input:
-    vcf = "../analysis/{sample}/renamed_vcfs/variants_{sample}_clair3.vcf.gz"
+    vcf = ANALYSIS + "/renamed_vcfs/variants_{sample}_clair3.vcf.gz"
   output:
-    "../analysis/{sample}/varseq/{sample}_varseq_submitted.txt"
+    ANALYSIS + "/varseq/{sample}_varseq_submitted.txt"
   message:
     "Submitting VarSeq project: {wildcards.sample}"
   params:

@@ -24,6 +24,8 @@ fi
 SAMPLE=$1
 shift
 EXTRA_ARGS=("$@")
+CONFIG_FILE="${NP_CONFIG_FILE:-config/config.yaml}"
+ANALYSIS_DIR="${NP_ANALYSIS_DIR:-}"
 
 
 # Split input to get sampleID, reference and type (AS or WGS)
@@ -63,11 +65,13 @@ if [[ $TYPE =~ "AS" ]]; then
     # Run snakemake
     snakemake \
     -s workflows/workflow_AS/Snakefile_AS \
+    --configfile "${CONFIG_FILE}" \
     --config \
     sample="${SAMPLE}" \
     refGenome="${REF}" \
     refFile="${REFFILE}" \
     ASversion="${VERSION}" \
+    ${ANALYSIS_DIR:+analysisDir="${ANALYSIS_DIR}"} \
     --use-conda \
     --conda-frontend conda \
     --rerun-incomplete \
@@ -82,10 +86,12 @@ elif [[ $TYPE == "WGS" ]]; then
     # Run snakemake
     snakemake \
     -s workflows/workflow_WGS/Snakefile_WGS \
+    --configfile "${CONFIG_FILE}" \
     --config \
     sample="${SAMPLE}" \
     refGenome="${REF}" \
     refFile="${REFFILE}" \
+    ${ANALYSIS_DIR:+analysisDir="${ANALYSIS_DIR}"} \
     --use-conda \
     --conda-frontend conda \
     --rerun-incomplete \

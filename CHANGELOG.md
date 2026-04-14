@@ -9,11 +9,11 @@
 
 Updated Apr 13, 2026 /MHA
 
-• Added config key `referenceDir` to `config/config.yaml` and `config/config_231025MHA.yaml` so reference files can live outside the workflow folder.
+• Added config key `referenceDir` to `config/config.yaml` so reference files can live outside the workflow folder.
 
-• Added config key `dataDir` to `config/config.yaml` and `config/config_231025MHA.yaml` so workflow data files can live outside the workflow folder.
+• Added config key `dataDir` to `config/config.yaml` so workflow data files can live outside the workflow folder.
 
-• Added config key `softwareDir` to `config/config.yaml` and `config/config_231025MHA.yaml` so workflow software resources can live outside the workflow folder.
+• Added config key `softwareDir` to `config/config.yaml` so workflow software resources can live outside the workflow folder.
 
 • Updated Snakemake files in `modules/common/rules` and `workflows/workflow_(AS/WGS)` to use `referenceDir` for reference paths instead of hardcoded `references/`.
 
@@ -21,6 +21,7 @@ Updated Apr 13, 2026 /MHA
 
 • Default config paths now point to `../STORAGE/resources/(references/data/software)`.
 
+• Automated-upload script 
 
 ---
 
