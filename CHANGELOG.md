@@ -7,6 +7,33 @@
 ---
 
 
+Updated Apr 16, 2026 /MHA
+
+• Added top-level `RUN.sh` wrapper for the nanopore preflight/Snakemake submission flow.
+
+• `bash RUN.sh` now defaults to `--entry snakemake`.
+
+• Added local `bash RUN.sh --help` output so help can be read without submitting a Slurm job.
+
+• Added `--continue` to the preflight entry system:
+
+  - `--entry preflight --continue`: preflight -> copy -> basecall -> align -> Snakemake.
+  - `--entry basecall --continue`: basecall -> align -> Snakemake.
+  - `--entry align --continue`: align -> Snakemake.
+
+• Added `clean_sbatch` helper to strip inherited `SLURM_MEM_PER_CPU`, `SLURM_MEM_PER_GPU`, and `SLURM_MEM_PER_NODE` before nested Slurm submissions. This fixes failed nested Snakemake submissions from preflight jobs.
+
+• Updated watcher defaults so `nanopore_imprint_scheduler.sh --watch` submits the full workflow through:
+
+  `bash RUN.sh --entry preflight --continue`
+
+• Added Git ignore rules for Slurm output files, Dorado temporary model directories, watcher state, and other generated files.
+
+• Tested `bash RUN.sh --entry align` on `2178-24downsampled_hg38_ASv2`. Alignment completed successfully, copied the aligned BAM to `analysis_v2/.../data/raw/`, and `samtools quickcheck` passed.
+
+---
+
+
 Updated Apr 13, 2026 /MHA
 
 • Added config key `referenceDir` to `config/config.yaml` so reference files can live outside the workflow folder.

@@ -1,6 +1,13 @@
 .snakemake/
 logs/
 .watch_state/
+*.out
+*.err
+.codex
+.tmp/
+**/.tmp/
+**/.temp_dorado_model-*/
+scripts/nanopore_preflight/logs/
 CHANGELOG.pdf
 software/
 varseqtemplates/
