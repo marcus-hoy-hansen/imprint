@@ -12,8 +12,8 @@
 # Usage:
 #   sbatch dorado_basecaller.sh <RUN_SAMPLE_ROOT> [OUT_BAM] [ALIGNED_BAM]
 # Example:
-#   sbatch dorado_basecaller.sh 251006_Nanopore_Adaptive/04203-21
-#   -> outputs 251006_Nanopore_Adaptive/04203-21/04203-21_sup.bam
+#   sbatch dorado_basecaller.sh upload_batch_adaptive/sample
+#   -> outputs upload_batch_adaptive/sample/sample_sup.bam
 
 set -euo pipefail
 umask 002
@@ -29,8 +29,8 @@ if [[ $# -lt 1 ]]; then
   exit 1
 fi
 
-ROOT="$1"                            # e.g. 251006_Nanopore_Adaptive/04203-21
-ROOT_BASENAME="$(basename "$ROOT")"  # e.g. 04203-21
+ROOT="$1"                            # e.g. upload_batch_adaptive/sample
+ROOT_BASENAME="$(basename "$ROOT")"  # e.g. sample
 DEFAULT_OUT="${ROOT_BASENAME}_sup.bam"
 OUT_BAM="${2:-$DEFAULT_OUT}"         # name only
 ALIGNED_BAM="${3:-}"

@@ -14,8 +14,8 @@ if [ $# -eq 0 ]; then
     >&2 echo "SampleID consists of Langtved ID, the reference (T2T/hg38) and type of sequencing(AS/WGS)"
     >&2 echo "Reference is name of reference. Must be either hg38 or T2T"
     >&2 echo "If the sample is adaptive you need to provide the version of the adaptive sampling bed file used during sequencing (eg. ASv1)"
-    >&2 echo "Example of running whole genome sample: bash runSnakemake.sh 1234-23_hg38_WGS"
-    >&2 echo "Example of running adaptive sample: bash runSnakemake.sh 1234-23_hg38_ASv1"
+    >&2 echo "Example of running whole genome sample: bash runSnakemake.sh sample_hg38_WGS"
+    >&2 echo "Example of running adaptive sample: bash runSnakemake.sh sample_hg38_ASv1"
     >&2 echo "Exiting"
     exit 1
 fi

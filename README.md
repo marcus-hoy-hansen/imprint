@@ -59,8 +59,8 @@ sbatch scripts/nanopore_preflight/nanopore_imprint_scheduler.sh --watch
 Direct sample submission is still available:
 
 ```bash
-bash scripts/runSnakemake.sh 2178-24downsampled_hg38_ASv2
-sbatch scripts/runSnakemake.sh 2178-24downsampled_hg38_ASv2
+bash scripts/runSnakemake.sh sample_hg38_ASv2
+sbatch scripts/runSnakemake.sh sample_hg38_ASv2
 ```
 
 ## Notes

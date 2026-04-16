@@ -29,7 +29,7 @@ Updated Apr 16, 2026 /MHA
 
 • Added Git ignore rules for Slurm output files, Dorado temporary model directories, watcher state, and other generated files.
 
-• Tested `bash RUN.sh --entry align` on `2178-24downsampled_hg38_ASv2`. Alignment completed successfully, copied the aligned BAM to `analysis_v2/.../data/raw/`, and `samtools quickcheck` passed.
+• Tested `bash RUN.sh --entry align` on a downsampled AS sample. Alignment completed successfully, copied the aligned BAM to `analysis_v2/.../data/raw/`, and `samtools quickcheck` passed.
 
 ---
 
