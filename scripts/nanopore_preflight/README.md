@@ -29,6 +29,7 @@ From the workflow repository root:
 
 ```bash
 bash RUN.sh
+bash RUN.sh --watch
 bash RUN.sh --entry preflight
 bash RUN.sh --entry preflight --continue
 bash RUN.sh --entry basecall
@@ -58,6 +59,12 @@ Submit periodic watch mode with:
 
 ```bash
 sbatch scripts/nanopore_preflight/nanopore_imprint_scheduler.sh --watch
+```
+
+The wrapper can submit the watcher directly:
+
+```bash
+bash RUN.sh --watch
 ```
 
 ## Notes

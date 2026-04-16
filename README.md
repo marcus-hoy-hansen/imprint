@@ -6,6 +6,7 @@ Snakemake workflow and preflight helpers for uploaded Nanopore runs. The current
 
 ```bash
 bash RUN.sh
+bash RUN.sh --watch
 ```
 
 Defaults to `--entry snakemake`.
@@ -52,6 +53,12 @@ and then resubmits the watcher after `NP_WATCH_INTERVAL`.
 
 ```bash
 sbatch scripts/nanopore_preflight/nanopore_imprint_scheduler.sh --watch
+```
+
+The same watch mode can be submitted through the wrapper:
+
+```bash
+bash RUN.sh --watch
 ```
 
 ## Direct Snakemake
