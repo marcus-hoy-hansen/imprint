@@ -39,6 +39,8 @@ bash RUN.sh --entry align --continue
 bash RUN.sh --entry snakemake
 ```
 
+With no arguments, `bash RUN.sh` defaults to `--entry preflight --continue`.
+
 Direct preflight script usage is also available:
 
 ```bash

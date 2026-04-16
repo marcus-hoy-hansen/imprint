@@ -9,7 +9,7 @@ bash RUN.sh
 bash RUN.sh --watch
 ```
 
-Defaults to `--entry snakemake`.
+Defaults to `--entry preflight --continue`.
 
 ```bash
 bash RUN.sh --entry preflight

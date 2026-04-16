@@ -13,7 +13,7 @@ Usage: bash RUN.sh [BASE] [--entry preflight|basecall|align|snakemake] [--contin
 
 Default:
   bash RUN.sh
-  Equivalent to: bash RUN.sh --entry snakemake
+  Equivalent to: bash RUN.sh --entry preflight --continue
 
 Stages:
   preflight  Run upload checks only. Add --continue to run the full workflow.
@@ -52,7 +52,7 @@ case "${1:-}" in
 esac
 
 if [[ $# -eq 0 ]]; then
-  set -- --entry snakemake
+  set -- --entry preflight --continue
 fi
 
 env \
