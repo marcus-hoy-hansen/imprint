@@ -70,6 +70,19 @@ bash scripts/runSnakemake.sh sample_hg38_ASv2
 sbatch scripts/runSnakemake.sh sample_hg38_ASv2
 ```
 
+## External Files
+
+The workflow expects these external resources to be available outside Git:
+
+- Reference FASTA files, for example `hg38_noAlt.fasta` and `GCF_009914755.1_T2T-CHM13v2.0_genomic.fna`.
+- Reference indexes required by the tools that consume the FASTA files.
+- Workflow data resources such as chromosome sizes, DMR normal BED files, and adaptive sampling BED files.
+- Dorado basecalling models, including the configured high-accuracy/super-accuracy and methylation models.
+- Dorado binaries for basecalling and alignment.
+- Clair3 model files, for example the configured ONT HAC model.
+- Tool bundles used by the workflow, including Modkit and other non-conda executables.
+- VarSeq project templates and remote submission scripts used for VarSeq import/submission.
+
 ## Notes
 
 - Generated Slurm logs, Dorado temporary model folders, `.snakemake/`, and local watcher state are ignored by Git.

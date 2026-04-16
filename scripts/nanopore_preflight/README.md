@@ -67,6 +67,16 @@ The wrapper can submit the watcher directly:
 bash RUN.sh --watch
 ```
 
+## External Files
+
+The preflight chain expects these external resources to be available outside Git:
+
+- Uploaded run folders with POD5 input and `output_hash_*.csv` files.
+- Reference FASTA files, for example `hg38_noAlt.fasta`.
+- Dorado basecalling models, including the configured high-accuracy/super-accuracy and methylation models.
+- Dorado binaries for basecalling and alignment.
+- Snakemake workflow resources used after alignment, including reference indexes, workflow data files, tool bundles, and VarSeq templates.
+
 ## Notes
 
 - The current preflight checks require run directories and `output_hash_*.csv` files.
