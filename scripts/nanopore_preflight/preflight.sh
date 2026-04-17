@@ -136,12 +136,38 @@ for exp_dir in "${exp_dirs[@]}"; do
       sample_token="${sample_name}_${suffix}"
       basecalled_bam="${dest}/${sample_name}/${sample_name}${supsuffix}.bam"
       aligned_bam="${dest}/${sample_name}/${sample_name}_${suffix}.bam"
+      analysis_sample_dir="${NP_OUT}/${sample_token}"
+      analysis_raw_dir="${analysis_sample_dir}/data/raw"
+      analysis_raw_bam="${analysis_raw_dir}/${sample_token}.bam"
+      varseq_marker="${analysis_sample_dir}/varseq/${sample_token}_varseq_submitted.txt"
       downstream_stage="$ENTRY_STAGE"
       if [[ "$CONTINUE_AFTER_ENTRY" -eq 1 ]]; then
         downstream_stage="snakemake"
       fi
 
       if [[ "$ENTRY_STAGE" == "align" ]]; then
+        if [[ -s "$analysis_raw_bam" ]]; then
+          if [[ "$CONTINUE_AFTER_ENTRY" -eq 1 ]]; then
+            echo "  [$sample_name] Analysis raw BAM exists; submitting Snakemake -> $sample_token"
+            clean_sbatch "${NP_SNAKEMAKE_SCRIPT}" "$sample_token"
+          else
+            echo "  [$sample_name] Analysis raw BAM exists; alignment skipped"
+          fi
+          continue
+        fi
+
+        if [[ -s "$aligned_bam" ]]; then
+          mkdir -p "$analysis_raw_dir"
+          cp -u "$aligned_bam" "$analysis_raw_dir/"
+          if [[ "$CONTINUE_AFTER_ENTRY" -eq 1 ]]; then
+            echo "  [$sample_name] Aligned BAM exists; copied to analysis and submitting Snakemake -> $sample_token"
+            clean_sbatch "${NP_SNAKEMAKE_SCRIPT}" "$sample_token"
+          else
+            echo "  [$sample_name] Aligned BAM exists; copied to analysis and alignment skipped"
+          fi
+          continue
+        fi
+
         echo "  [$sample_name] Submitting alignment directly -> $aligned_bam"
         clean_sbatch --export=ALL,NP_ENTRY_STAGE="$downstream_stage" "${NP_SCRIPT_ROOT}/dorado_align_and_submit.sh" "$basecalled_bam" "$aligned_bam" "$sample_token"
         continue
@@ -150,6 +176,36 @@ for exp_dir in "${exp_dirs[@]}"; do
       if [[ "$ENTRY_STAGE" == "snakemake" ]]; then
         echo "  [$sample_name] Submitting Snakemake directly -> $sample_token"
         clean_sbatch "${NP_SNAKEMAKE_SCRIPT}" "$sample_token"
+        continue
+      fi
+
+      if [[ "$CONTINUE_AFTER_ENTRY" -eq 1 ]]; then
+        if [[ -s "$varseq_marker" ]]; then
+          echo "  [$sample_name] Final workflow marker exists; downstream skipped -> $varseq_marker"
+          continue
+        fi
+
+        if [[ -s "$analysis_raw_bam" ]]; then
+          echo "  [$sample_name] Analysis raw BAM exists; submitting Snakemake -> $sample_token"
+          clean_sbatch "${NP_SNAKEMAKE_SCRIPT}" "$sample_token"
+          continue
+        fi
+
+        if [[ -s "$aligned_bam" ]]; then
+          mkdir -p "$analysis_raw_dir"
+          cp -u "$aligned_bam" "$analysis_raw_dir/"
+          echo "  [$sample_name] Aligned BAM exists; copied to analysis and submitting Snakemake -> $sample_token"
+          clean_sbatch "${NP_SNAKEMAKE_SCRIPT}" "$sample_token"
+          continue
+        fi
+
+        if [[ -s "$basecalled_bam" ]]; then
+          echo "  [$sample_name] Basecalled BAM exists; submitting alignment -> $aligned_bam"
+          clean_sbatch --export=ALL,NP_ENTRY_STAGE=snakemake "${NP_SCRIPT_ROOT}/dorado_align_and_submit.sh" "$basecalled_bam" "$aligned_bam" "$sample_token"
+          continue
+        fi
+      elif [[ "$ENTRY_STAGE" == "basecall" && -s "$basecalled_bam" ]]; then
+        echo "  [$sample_name] Basecalled BAM exists; basecalling skipped"
         continue
       fi
 
