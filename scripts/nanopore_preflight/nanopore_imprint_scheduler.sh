@@ -93,5 +93,5 @@ echo "[INFO] Workload submission finished at $(date)"
 
 if [[ "$WATCH" -eq 1 ]]; then
   echo "[INFO] Rescheduling in $INTERVAL"
-  clean_sbatch --begin=now+${INTERVAL} "$0" --watch "${EXTRA_ARGS[@]}"
+  clean_sbatch --begin=now+${INTERVAL} "${NP_SCRIPT_ROOT}/nanopore_imprint_scheduler.sh" --watch "${EXTRA_ARGS[@]}"
 fi

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="${SLURM_SUBMIT_DIR:-$(pwd)}"
+ROOT="$(cd "${ROOT}" && pwd)"
 CONFIG_FILE="${ROOT}/scripts/nanopore_preflight/config.sh"
 PREFLIGHT="${ROOT}/scripts/nanopore_preflight/preflight.sh"
 SCHEDULER="${ROOT}/scripts/nanopore_preflight/nanopore_imprint_scheduler.sh"
