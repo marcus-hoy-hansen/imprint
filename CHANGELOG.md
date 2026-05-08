@@ -6,6 +6,28 @@
 
 ---
 
+Updated May 8, 2026 /MHA
+
+• Added QDNAseq CNV calling to the adaptive sampling workflow.
+
+• Added shared-resource based hg38 QDNAseq bin annotations in `STORAGE/resources/data/qdnaseq/` and updated the workflow to use configured bin RDS files instead of package-local hg38 annotations.
+
+• Added qDNAseq caching/resume behavior through persistent `readCounts.rds` and `copyNumbers.rds` files, with Snakemake now always passing `--continue-aborted`.
+
+• Updated qDNAseq output naming to include `QDNAseq` in exported non-plot filenames.
+
+• Added qDNAseq profile resources in `profiles/AS/config.yaml`.
+
+• Switched the configured qDNAseq bin size to 500 kb using shared resource `hg38_500kb_bins.rds`.
+
+• Added `scripts/chrom_variantallelefrequencies_panel.py` to the adaptive sampling workflow as a post-Clair3 plotting step using:
+
+  `--vcf analysis_v2/<sample>/variants/<sample>_clair3.vcf.gz --all-chroms --depth 20`
+
+• Added `chromVariantAlleleFrequenciesPanel` resource settings in `profiles/AS/config.yaml`.
+
+---
+
 
 Updated Apr 16, 2026 /MHA
 

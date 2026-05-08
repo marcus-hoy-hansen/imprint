@@ -99,7 +99,7 @@ if (continue_aborted && file.exists(copynumber_rds)) {
   message("Segmenting...")
   copyNumbers <- segmentBins(
     readCounts,
-    alpha = 0.001,
+    alpha = 0.01,
     undo.splits = "sdundo",
     undo.SD = 1.0
   )
