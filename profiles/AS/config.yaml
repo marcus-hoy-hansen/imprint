@@ -42,6 +42,7 @@ set-threads:
   makeBlacklist: 4
   hifiCNV: 8
   hifiCNV_cleanup: 1
+  qDNAseq: 1
   straglr: 32
   vcfrename: 1
   varseqProject: 1
@@ -158,6 +159,10 @@ set-resources:
   hifiCNV_cleanup:
     mem_mb: 1024    # 1 GB
     runtime: 10     # 10 minutes
+
+  qDNAseq:
+    mem_mb: 38912   # 38 GB
+    runtime: 240    # 4 hours
 
   straglr:
     mem_mb: 49152   # 48 GB

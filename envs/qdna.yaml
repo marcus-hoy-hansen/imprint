@@ -1,0 +1,7 @@
+name: qdna_env
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - r-base=4.3
+  - bioconductor-qdnaseq

@@ -17,6 +17,7 @@ rule all:
     
         # VARIANT CALLING
         expand(ANALYSIS + "/variants/{sample}_clair3.vcf.gz", sample=config["sample"]),
+        expand(ANALYSIS + "/variants/{sample}_variant_panel.done", sample=config["sample"]),
         expand(ANALYSIS + "/data/{sample}.haplotagged.{bamSuffix}", sample=config["sample"], bamSuffix=["bam", "bam.bai"]),
 
         # METHYLATION
@@ -33,6 +34,13 @@ rule all:
         # COPY NUMBER VARIANTS
         expand(ANALYSIS + "/CNV/{sample}_hifiCNV.vcf.gz", sample=config["sample"]),
         expand(ANALYSIS + "/CNV/{sample}_hifiCNV.depth.bw", sample=config["sample"]),
+        expand(ANALYSIS + "/CNV/{sample}_QDNAseq_genome_plot.png", sample=config["sample"]),
+        expand(ANALYSIS + "/CNV/{sample}_QDNAseq_segments_log2.seg", sample=config["sample"]),
+        expand(ANALYSIS + "/CNV/{sample}_QDNAseq_segments_with_CN_class.seg", sample=config["sample"]),
+        expand(ANALYSIS + "/CNV/{sample}_QDNAseq_log2.bed", sample=config["sample"]),
+        expand(ANALYSIS + "/CNV/{sample}_QDNAseq_log2.igv", sample=config["sample"]),
+        expand(ANALYSIS + "/CNV/{sample}_QDNAseq_log2_filtered.igv", sample=config["sample"]),
+        expand(ANALYSIS + "/CNV/{sample}_QDNAseq_log2.vcf", sample=config["sample"]),
         
         # REPEATS
         expand(ANALYSIS + "/STR/{sample}_straglr.bed", sample=config["sample"]),
@@ -74,6 +82,7 @@ use rule nanoPlot from common
 ##################################################
 use rule clair3 from common
 use rule clair3CleanUp from common
+use rule chromVariantAlleleFrequenciesPanel from common
 
 
 
@@ -168,6 +177,7 @@ rule hifiCNV:
 
 
 use rule hifiCNV_cleanup from common
+use rule qDNAseq from common
 
 
 

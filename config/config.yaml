@@ -46,6 +46,10 @@ CUTESV_diff_ratio_merging_DEL: 0.3
 # Path to directory with adaptive sampling files
 ASdir: /faststorage/project/nanopore_kga/development/adaptiveSamplingBed
 
+# QDNAseq hg38 bin annotations generated once and shared as an RDS resource
+qDNAseqBinSize: 100
+qDNAseqBinsHg38: /faststorage/project/nanopore_kga/STORAGE/resources/data/qdnaseq/hg38_100kb_bins.rds
+
 
 
 ###########

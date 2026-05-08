@@ -163,6 +163,30 @@ rule clair3CleanUp:
     f"; rm {analysis_dir}/{{wildcards.sample}}/variants/merge_output.vcf.gz*"
 
 
+rule chromVariantAlleleFrequenciesPanel:
+  input:
+    vcf = ANALYSIS + "/variants/{sample}_clair3.vcf.gz"
+  output:
+    outdir = directory(ANALYSIS + "/variants/{sample}_variant_panel"),
+    done = ANALYSIS + "/variants/{sample}_variant_panel.done"
+  message:
+    "Generating chromosome VAF panel: {wildcards.sample}"
+  conda:
+    "../../../envs/variant_panel.yaml"
+  params:
+    outDir = ANALYSIS + "/variants/{sample}_variant_panel",
+    script = "scripts/chrom_variantallelefrequencies_panel.py",
+    depth = 20
+  shell:
+    "mkdir -p {params.outDir} "
+    "&& python {params.script} "
+    "--vcf {input.vcf} "
+    "--all-chroms "
+    "--depth {params.depth} "
+    "--output-dir {params.outDir} "
+    "&& touch {output.done}"
+
+
 
 ##################################################
 #                   METHYLATION                  #
@@ -639,6 +663,34 @@ rule vcfrename:
 ##################################################
 #                     VARSEQ                     #
 ##################################################
+
+rule qDNAseq:
+  input:
+    bam = ANALYSIS + "/data/{sample}.bam",
+    bai = ANALYSIS + "/data/{sample}.bam.bai"
+  output:
+    plot = ANALYSIS + "/CNV/{sample}_QDNAseq_genome_plot.png",
+    seg = ANALYSIS + "/CNV/{sample}_QDNAseq_segments_log2.seg",
+    seg_class = ANALYSIS + "/CNV/{sample}_QDNAseq_segments_with_CN_class.seg",
+    bed = ANALYSIS + "/CNV/{sample}_QDNAseq_log2.bed",
+    igv = ANALYSIS + "/CNV/{sample}_QDNAseq_log2.igv",
+    igv_filtered = ANALYSIS + "/CNV/{sample}_QDNAseq_log2_filtered.igv",
+    vcf = ANALYSIS + "/CNV/{sample}_QDNAseq_log2.vcf"
+  message:
+    "Running QDNAseq: {wildcards.sample}"
+  conda:
+    "../../../envs/qdna.yaml"
+  params:
+    outDir = ANALYSIS + "/CNV",
+    script = "scripts/qdna_stable_cli.R",
+    binsRds = config["qDNAseqBinsHg38"],
+    binSize = config["qDNAseqBinSize"]
+  shell:
+    "mkdir -p {params.outDir} "
+    "&& Rscript {params.script} {input.bam} {wildcards.sample} {params.binSize} "
+    "--bins-rds {params.binsRds} "
+    "--continue-aborted "
+    "--outdir {params.outDir}"
 
 rule varseqProject:
   input:
