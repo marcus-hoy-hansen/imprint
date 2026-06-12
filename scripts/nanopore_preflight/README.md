@@ -41,6 +41,27 @@ bash RUN.sh --entry snakemake
 
 With no arguments, `bash RUN.sh` defaults to `--entry preflight --continue`.
 
+### Rerunning Snakemake For Finished Samples
+
+`--entry preflight --continue` is conservative: if a sample already has the final VarSeq marker
+`analysis_v2/<sample>/varseq/<sample>_varseq_submitted.txt`, preflight treats the sample as already
+finished and skips downstream resubmission.
+
+If you want to rerun Snakemake for samples that were already completed before, use:
+
+```bash
+bash RUN.sh --entry snakemake
+```
+
+This bypasses the preflight `varseq_submitted.txt` skip and submits `runSnakemake.sh` directly for
+the discovered samples.
+
+If you want to rerun only one sample, run the launcher directly:
+
+```bash
+bash scripts/runSnakemake.sh 02346-26_hg38_ASv2
+```
+
 Direct preflight script usage is also available:
 
 ```bash
@@ -87,6 +108,8 @@ The preflight chain expects these external resources to be available outside Git
 - `--entry align` assumes the expected basecalled BAM already exists in `STORAGE/<experiment>/<sample>/`.
 - `--entry align --continue` runs alignment and then submits Snakemake.
 - `--entry snakemake` assumes the workflow inputs already exist where `runSnakemake.sh` expects them.
+- `--entry preflight --continue` skips samples that already have the final VarSeq marker.
+- Use `--entry snakemake` when you need to resubmit Snakemake for already-finished samples.
 - Default analysis output root is `${NP_PROJECT_ROOT}/analysis_v2`.
 - Default reference is `${NP_PROJECT_ROOT}/STORAGE/resources/references/hg38_noAlt.fasta`.
 - Default Snakemake launcher is `${NP_PROJECT_ROOT}/workflow_dev/scripts/runSnakemake.sh`.

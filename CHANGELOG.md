@@ -6,6 +6,14 @@
 
 ---
 
+Updated Jun 12, 2026 /MHA
+
+• Added `scripts/target_region_mean_coverage.sh` to calculate mean coverage per target BED region from an aligned BAM, write Q1/median/Q3/mean summary values at the top of the output, and save the result as a TSV next to the BAM.
+
+• Updated `scripts/target_region_mean_coverage.sh` to test both the standard adaptive sampling hg38 v2 BED and the RB GRCh38 v3 BED, then keep the panel with the higher mean region coverage in the saved output.
+
+---
+
 Updated May 8, 2026 /MHA
 
 • Added QDNAseq CNV calling to the adaptive sampling workflow.

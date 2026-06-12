@@ -175,15 +175,43 @@ rule chromVariantAlleleFrequenciesPanel:
     "../../../envs/variant_panel.yaml"
   params:
     outDir = ANALYSIS + "/variants/{sample}_variant_panel",
-    script = "scripts/chrom_variantallelefrequencies_panel.py",
-    depth = 20
+    script = "scripts/chrom_variantallelefrequencies_panel_cytoband.py",
+    depth = 20,
+    cytoband = "references/cytoBand.txt",
+    bed1 = "references/RB_adaptiveSampling_GRCh38_v3.bed",
+    bed2 = "references/adaptiveSampling_hg38_v2.bed",
+    bed1Dir = ANALYSIS + "/variants/{sample}_variant_panel/RB_adaptiveSampling_GRCh38_v3",
+    bed2Dir = ANALYSIS + "/variants/{sample}_variant_panel/adaptiveSampling_hg38_v2"
   shell:
     "mkdir -p {params.outDir} "
     "&& python {params.script} "
     "--vcf {input.vcf} "
     "--all-chroms "
+    "--x-axis-mode index "
+    "--cytoband-mode uncollapsed "
+    "--cytoband {params.cytoband} "
     "--depth {params.depth} "
     "--output-dir {params.outDir} "
+    "&& mkdir -p {params.bed1Dir} "
+    "&& python {params.script} "
+    "--vcf {input.vcf} "
+    "--all-chroms "
+    "--bed {params.bed1} "
+    "--x-axis-mode index "
+    "--cytoband-mode collapsed "
+    "--cytoband {params.cytoband} "
+    "--depth {params.depth} "
+    "--output-dir {params.bed1Dir} "
+    "&& mkdir -p {params.bed2Dir} "
+    "&& python {params.script} "
+    "--vcf {input.vcf} "
+    "--all-chroms "
+    "--bed {params.bed2} "
+    "--x-axis-mode index "
+    "--cytoband-mode collapsed "
+    "--cytoband {params.cytoband} "
+    "--depth {params.depth} "
+    "--output-dir {params.bed2Dir} "
     "&& touch {output.done}"
 
 
@@ -669,25 +697,26 @@ rule qDNAseq:
     bam = ANALYSIS + "/data/{sample}.bam",
     bai = ANALYSIS + "/data/{sample}.bam.bai"
   output:
-    plot = ANALYSIS + "/CNV/{sample}_QDNAseq_genome_plot.png",
-    seg = ANALYSIS + "/CNV/{sample}_QDNAseq_segments_log2.seg",
-    seg_class = ANALYSIS + "/CNV/{sample}_QDNAseq_segments_with_CN_class.seg",
-    bed = ANALYSIS + "/CNV/{sample}_QDNAseq_log2.bed",
-    igv = ANALYSIS + "/CNV/{sample}_QDNAseq_log2.igv",
-    igv_filtered = ANALYSIS + "/CNV/{sample}_QDNAseq_log2_filtered.igv",
-    vcf = ANALYSIS + "/CNV/{sample}_QDNAseq_log2.vcf"
+    plot = ANALYSIS + "/CNV/QDNAseq/{sample}_{binsize}kb_QDNAseq_genome_plot.png",
+    seg = ANALYSIS + "/CNV/QDNAseq/{sample}_{binsize}kb_QDNAseq_segments_log2.seg",
+    seg_class = ANALYSIS + "/CNV/QDNAseq/{sample}_{binsize}kb_QDNAseq_segments_with_CN_class.seg",
+    bed = ANALYSIS + "/CNV/QDNAseq/{sample}_{binsize}kb_QDNAseq_log2.bed",
+    igv = ANALYSIS + "/CNV/QDNAseq/{sample}_{binsize}kb_QDNAseq_log2.igv",
+    igv_filtered = ANALYSIS + "/CNV/QDNAseq/{sample}_{binsize}kb_QDNAseq_log2_filtered.igv",
+    vcf = ANALYSIS + "/CNV/QDNAseq/{sample}_{binsize}kb_QDNAseq_log2.vcf"
   message:
-    "Running QDNAseq: {wildcards.sample}"
+    "Running QDNAseq ({wildcards.binsize} kb): {wildcards.sample}"
   conda:
     "../../../envs/qdna.yaml"
   params:
-    outDir = ANALYSIS + "/CNV",
+    outDir = ANALYSIS + "/CNV/QDNAseq",
     script = "scripts/qdna_stable_cli.R",
-    binsRds = config["qDNAseqBinsHg38"],
-    binSize = config["qDNAseqBinSize"]
+    binsRds = lambda wildcards: config["qDNAseqBinsHg38"][str(wildcards.binsize)],
+    binSize = lambda wildcards: str(wildcards.binsize),
+    sampleId = lambda wildcards: f"{wildcards.sample}_{wildcards.binsize}kb"
   shell:
     "mkdir -p {params.outDir} "
-    "&& Rscript {params.script} {input.bam} {wildcards.sample} {params.binSize} "
+    "&& Rscript {params.script} {input.bam} {params.sampleId} {params.binSize} "
     "--bins-rds {params.binsRds} "
     "--continue-aborted "
     "--outdir {params.outDir}"

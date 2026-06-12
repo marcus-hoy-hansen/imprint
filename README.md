@@ -75,6 +75,10 @@ Adaptive sampling runs now also generate:
 - QDNAseq copy-number outputs in `analysis_v2/<sample>/CNV/`
 - chromosome-wide variant allele frequency panel plots in `analysis_v2/<sample>/variants/<sample>_variant_panel/`
 
+Coverage helper scripts are also available under `scripts/`:
+
+- `target_region_mean_coverage.sh` writes target-region mean coverage plus Q1/median/Q3/mean summary values to a TSV next to a BAM. It currently evaluates both the standard hg38 v2 adaptive sampling BED and the RB GRCh38 v3 BED, then keeps the panel with the higher mean region coverage.
+
 ## External Files
 
 The workflow expects these external resources to be available outside Git:

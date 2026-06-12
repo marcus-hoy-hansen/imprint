@@ -4,6 +4,7 @@ configfile: "config/config.yaml"
 analysis_dir = config["analysisDir"]
 ANALYSIS = analysis_dir + "/{sample}"
 WILDCARD_ANALYSIS = analysis_dir + "/{wildcards.sample}"
+QDNA_BIN_SIZES = [str(size) for size in config["qDNAseqBinSizes"]]
 
 localrules: varseqProject
 
@@ -34,13 +35,13 @@ rule all:
         # COPY NUMBER VARIANTS
         expand(ANALYSIS + "/CNV/{sample}_hifiCNV.vcf.gz", sample=config["sample"]),
         expand(ANALYSIS + "/CNV/{sample}_hifiCNV.depth.bw", sample=config["sample"]),
-        expand(ANALYSIS + "/CNV/{sample}_QDNAseq_genome_plot.png", sample=config["sample"]),
-        expand(ANALYSIS + "/CNV/{sample}_QDNAseq_segments_log2.seg", sample=config["sample"]),
-        expand(ANALYSIS + "/CNV/{sample}_QDNAseq_segments_with_CN_class.seg", sample=config["sample"]),
-        expand(ANALYSIS + "/CNV/{sample}_QDNAseq_log2.bed", sample=config["sample"]),
-        expand(ANALYSIS + "/CNV/{sample}_QDNAseq_log2.igv", sample=config["sample"]),
-        expand(ANALYSIS + "/CNV/{sample}_QDNAseq_log2_filtered.igv", sample=config["sample"]),
-        expand(ANALYSIS + "/CNV/{sample}_QDNAseq_log2.vcf", sample=config["sample"]),
+        expand(ANALYSIS + "/CNV/QDNAseq/{sample}_{binsize}kb_QDNAseq_genome_plot.png", sample=config["sample"], binsize=QDNA_BIN_SIZES),
+        expand(ANALYSIS + "/CNV/QDNAseq/{sample}_{binsize}kb_QDNAseq_segments_log2.seg", sample=config["sample"], binsize=QDNA_BIN_SIZES),
+        expand(ANALYSIS + "/CNV/QDNAseq/{sample}_{binsize}kb_QDNAseq_segments_with_CN_class.seg", sample=config["sample"], binsize=QDNA_BIN_SIZES),
+        expand(ANALYSIS + "/CNV/QDNAseq/{sample}_{binsize}kb_QDNAseq_log2.bed", sample=config["sample"], binsize=QDNA_BIN_SIZES),
+        expand(ANALYSIS + "/CNV/QDNAseq/{sample}_{binsize}kb_QDNAseq_log2.igv", sample=config["sample"], binsize=QDNA_BIN_SIZES),
+        expand(ANALYSIS + "/CNV/QDNAseq/{sample}_{binsize}kb_QDNAseq_log2_filtered.igv", sample=config["sample"], binsize=QDNA_BIN_SIZES),
+        expand(ANALYSIS + "/CNV/QDNAseq/{sample}_{binsize}kb_QDNAseq_log2.vcf", sample=config["sample"], binsize=QDNA_BIN_SIZES),
         
         # REPEATS
         expand(ANALYSIS + "/STR/{sample}_straglr.bed", sample=config["sample"]),
