@@ -12,3 +12,5 @@ CHANGELOG.pdf
 software/
 varseqtemplates/
 VarSeq Templates/
+__pycache__/
+*.pyc
