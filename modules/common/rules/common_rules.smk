@@ -46,7 +46,7 @@ rule sortMergedBAM:
   input:
     ANALYSIS + "/data/{sample}_unSorted.bam"
   output:
-    protected(ANALYSIS + "/data/{sample}.bam")
+    ANALYSIS + "/data/{sample}.bam"
   message:
     "Sorting BAM: {wildcards.sample}"
   conda:
@@ -64,7 +64,7 @@ rule indexMergedBAM:
   input:
     ANALYSIS + "/data/{sample}.bam"
   output:
-    protected(ANALYSIS + "/data/{sample}.bam.bai")
+    ANALYSIS + "/data/{sample}.bam.bai"
   message:  
     "Indexing {input}"
   conda:
@@ -100,6 +100,23 @@ rule nanoPlot:
     "--outdir {output.outDir} "
     "--threads {threads} "
     "{params}"
+
+
+rule qualityValidation:
+  input:
+    bam = ANALYSIS + "/data/{sample}.bam",
+    bai = ANALYSIS + "/data/{sample}.bam.bai"
+  output:
+    target_cov = ANALYSIS + "/QC/validation_metrics/{sample}.target_region_mean_coverage.tsv",
+    non_target_cov = ANALYSIS + "/QC/validation_metrics/{sample}.non_target_mean_coverage.txt",
+    target_read_length = ANALYSIS + "/QC/validation_metrics/{sample}.target_read_length_stats.txt",
+    non_target_read_length = ANALYSIS + "/QC/validation_metrics/{sample}.non_target_read_length_stats.txt",
+    flagstat = ANALYSIS + "/QC/validation_metrics/{sample}.flagstat.txt",
+    stats = ANALYSIS + "/QC/validation_metrics/{sample}.stats.txt"
+  message:
+    "Quality validation: {wildcards.sample}"
+  shell:
+    "bash scripts/quality_validation.sh {input.bam}"
 
 
 ##################################################
@@ -145,19 +162,20 @@ rule clair3CleanUp:
     vcf = ANALYSIS + "/variants/phased_merge_output.vcf.gz",
     tbi = ANALYSIS + "/variants/phased_merge_output.vcf.gz.tbi"
   output:
-    bam = protected(ANALYSIS + "/data/{sample}.haplotagged.bam"),
-    bai = protected(ANALYSIS + "/data/{sample}.haplotagged.bam.bai"),
-    vcf = protected(ANALYSIS + "/variants/{sample}_clair3.vcf.gz"),
-    tbi = protected(ANALYSIS + "/variants/{sample}_clair3.vcf.gz.tbi")
+    bam = ANALYSIS + "/data/{sample}.haplotagged.bam",
+    bai = ANALYSIS + "/data/{sample}.haplotagged.bam.bai",
+    vcf = ANALYSIS + "/variants/{sample}_clair3.vcf.gz",
+    tbi = ANALYSIS + "/variants/{sample}_clair3.vcf.gz.tbi"
   message:
     "Cleaning up files after variant calling"
   shell:
-    "mv {input.bam} {output.bam} "
-    "&& mv {input.bai} {output.bai} "
-    "&& mv {input.vcf} {output.vcf} "
-    "&& mv {input.tbi} {output.tbi} "
-    f"&& mkdir -p {analysis_dir}/{{wildcards.sample}}/logs && mv {analysis_dir}/{{wildcards.sample}}/variants/log {analysis_dir}/{{wildcards.sample}}/logs/clair3 "
-    f"; mkdir -p {analysis_dir}/{{wildcards.sample}}/logs/clair3 && mv {analysis_dir}/{{wildcards.sample}}/variants/run_clair3.log {analysis_dir}/{{wildcards.sample}}/logs/clair3/run_clair3.log "
+    "cp -f {input.bam} {output.bam} "
+    "&& cp -f {input.bai} {output.bai} "
+    "&& cp -f {input.vcf} {output.vcf} "
+    "&& cp -f {input.tbi} {output.tbi} "
+    f"&& mkdir -p {analysis_dir}/{{wildcards.sample}}/logs/clair3 "
+    f"&& if [ -d {analysis_dir}/{{wildcards.sample}}/variants/log ]; then cp -r {analysis_dir}/{{wildcards.sample}}/variants/log/. {analysis_dir}/{{wildcards.sample}}/logs/clair3/; fi "
+    f"&& if [ -f {analysis_dir}/{{wildcards.sample}}/variants/run_clair3.log ]; then cp -f {analysis_dir}/{{wildcards.sample}}/variants/run_clair3.log {analysis_dir}/{{wildcards.sample}}/logs/clair3/run_clair3.log; fi "
     f"; rm {analysis_dir}/{{wildcards.sample}}/variants/full_alignment.vcf.gz* "
     f"; rm {analysis_dir}/{{wildcards.sample}}/variants/pileup.vcf.gz* "
     f"; rm {analysis_dir}/{{wildcards.sample}}/variants/merge_output.vcf.gz*"
@@ -347,7 +365,7 @@ rule bgzipBedMethyl:
   input:
     ANALYSIS + "/methylation/{sample}_{haplotype}_pileup.bed"
   output:
-    protected(ANALYSIS + "/methylation/{sample}_{haplotype}_pileup.bed.gz")
+    ANALYSIS + "/methylation/{sample}_{haplotype}_pileup.bed.gz"
   message:
     "Bgzipping {input}"
   conda:
@@ -364,7 +382,7 @@ rule indexBedMethyl:
   input:
     ANALYSIS + "/methylation/{sample}_{haplotype}_pileup.bed.gz"
   output:
-    protected(ANALYSIS + "/methylation/{sample}_{haplotype}_pileup.bed.gz.tbi")
+    ANALYSIS + "/methylation/{sample}_{haplotype}_pileup.bed.gz.tbi"
   message:
     "Indexing {input}"
   conda:
@@ -519,7 +537,7 @@ rule sniffles2:
     bai = ANALYSIS + "/data/{sample}.bam.bai",
     ref = expand("{referenceDir}/{reference}", referenceDir=config["referenceDir"], reference=config["refFile"])
   output:
-    vcf = protected(ANALYSIS + "/structural_variation/{sample}_sniffles2.vcf.gz")
+    vcf = ANALYSIS + "/structural_variation/{sample}_sniffles2.vcf.gz"
   message:
     "Sniffles2: {wildcards.sample} "
   conda:
@@ -571,7 +589,7 @@ rule bgzipVCF:
   input:
     ANALYSIS + "/structural_variation/{sample}_cuteSV.vcf"
   output:
-    protected(ANALYSIS + "/structural_variation/{sample}_cuteSV.vcf.gz")
+    ANALYSIS + "/structural_variation/{sample}_cuteSV.vcf.gz"
   message:
     "Bgzipping CuteSV VCF file: {wildcards.sample}"
   conda:
@@ -588,7 +606,7 @@ rule indexVCF:
   input:
     ANALYSIS + "/structural_variation/{sample}_cuteSV.vcf.gz"
   output:
-    protected(ANALYSIS + "/structural_variation/{sample}_cuteSV.vcf.gz.tbi")
+    ANALYSIS + "/structural_variation/{sample}_cuteSV.vcf.gz.tbi"
   message:
     "Indexing CuteSV VCF file: {wildcards.sample}"
   conda:

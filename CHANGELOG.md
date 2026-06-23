@@ -6,6 +6,22 @@
 
 ---
 
+Updated Jun 23, 2026 /Codex
+
+• Added Snakemake rule `qualityValidation` to both AS and WGS workflows using `scripts/quality_validation.sh`.
+
+• Added `QC/validation_metrics/` outputs to `rule all` for both `workflows/workflow_AS/Snakefile_AS` and `workflows/workflow_WGS/Snakefile_WGS`.
+
+• Added profile resources for `qualityValidation` in `profiles/AS/config.yaml` and `profiles/WGS/config.yaml`:
+
+  `threads: 1`, `mem_mb: 4096`, `runtime: 300`
+
+• Updated `modules/common/rules/common_rules.smk` and `modules/common/rules/common_rules.smk_dev` so `clair3CleanUp` copies final outputs instead of moving them. This keeps Clair3 intermediates available for reruns and prevents unnecessary upstream Clair3 recomputation when stale incomplete metadata is present.
+
+• Removed Snakemake `protected()` wrappers from the common rules files to avoid write-protection collisions during reruns.
+
+---
+
 Updated Jun 12, 2026 /MHA
 
 • Added `scripts/target_region_mean_coverage.sh` to calculate mean coverage per target BED region from an aligned BAM, write Q1/median/Q3/mean summary values at the top of the output, and save the result as a TSV next to the BAM.

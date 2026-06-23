@@ -21,6 +21,7 @@ set-threads:
   sortMergedBAM: 20
   indexMergedBAM: 4
   nanoPlot: 15
+  qualityValidation: 1
   clair3: 33
   clair3CleanUp: 1
   updateTags: 1
@@ -69,6 +70,10 @@ set-resources:
   nanoPlot:
     mem_mb: 40960   # 40 GB
     runtime: 240    # 4 hours
+
+  qualityValidation:
+    mem_mb: 4096    # 4 GB
+    runtime: 300    # 5 hours
 
   clair3:
     mem_mb: 81920   # 80 GB

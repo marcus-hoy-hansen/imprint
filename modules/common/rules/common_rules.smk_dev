@@ -42,7 +42,7 @@ rule sortMergedBAM:
   input:
     "../analysis/{sample}/data/{sample}_unSorted.bam"
   output:
-    protected("../analysis/{sample}/data/{sample}.bam")
+    "../analysis/{sample}/data/{sample}.bam"
   message:
     "Sorting BAM: {wildcards.sample}"
   conda:
@@ -60,7 +60,7 @@ rule indexMergedBAM:
   input:
     "../analysis/{sample}/data/{sample}.bam"
   output:
-    protected("../analysis/{sample}/data/{sample}.bam.bai")
+    "../analysis/{sample}/data/{sample}.bam.bai"
   message:  
     "Indexing {input}"
   conda:
@@ -96,6 +96,23 @@ rule nanoPlot:
     "--outdir {output.outDir} "
     "--threads {threads} "
     "{params}"
+
+
+rule qualityValidation:
+  input:
+    bam = "../analysis/{sample}/data/{sample}.bam",
+    bai = "../analysis/{sample}/data/{sample}.bam.bai"
+  output:
+    target_cov = "../analysis/{sample}/QC/validation_metrics/{sample}.target_region_mean_coverage.tsv",
+    non_target_cov = "../analysis/{sample}/QC/validation_metrics/{sample}.non_target_mean_coverage.txt",
+    target_read_length = "../analysis/{sample}/QC/validation_metrics/{sample}.target_read_length_stats.txt",
+    non_target_read_length = "../analysis/{sample}/QC/validation_metrics/{sample}.non_target_read_length_stats.txt",
+    flagstat = "../analysis/{sample}/QC/validation_metrics/{sample}.flagstat.txt",
+    stats = "../analysis/{sample}/QC/validation_metrics/{sample}.stats.txt"
+  message:
+    "Quality validation: {wildcards.sample}"
+  shell:
+    "bash scripts/quality_validation.sh {input.bam}"
 
 
 ##################################################
@@ -142,19 +159,20 @@ rule clair3CleanUp:
     vcf = "../analysis/{sample}/variants/phased_merge_output.vcf.gz",
     tbi = "../analysis/{sample}/variants/phased_merge_output.vcf.gz.tbi"
   output:
-    bam = protected("../analysis/{sample}/data/{sample}.haplotagged.bam"),
-    bai = protected("../analysis/{sample}/data/{sample}.haplotagged.bam.bai"),
-    vcf = protected("../analysis/{sample}/variants/{sample}_clair3.vcf.gz"),
-    tbi = protected("../analysis/{sample}/variants/{sample}_clair3.vcf.gz.tbi")
+    bam = "../analysis/{sample}/data/{sample}.haplotagged.bam",
+    bai = "../analysis/{sample}/data/{sample}.haplotagged.bam.bai",
+    vcf = "../analysis/{sample}/variants/{sample}_clair3.vcf.gz",
+    tbi = "../analysis/{sample}/variants/{sample}_clair3.vcf.gz.tbi"
   message:
     "Cleaning up files after variant calling"
   shell:
-    "mv {input.bam} {output.bam} "
-    "&& mv {input.bai} {output.bai} "
-    "&& mv {input.vcf} {output.vcf} "
-    "&& mv {input.tbi} {output.tbi} "
-    "&& mkdir -p ../analysis/{wildcards.sample}/logs && mv ../analysis/{wildcards.sample}/variants/log ../analysis/{wildcards.sample}/logs/clair3 "
-    "; mkdir -p ../analysis/{wildcards.sample}/logs/clair3 && mv ../analysis/{wildcards.sample}/variants/run_clair3.log ../analysis/{wildcards.sample}/logs/clair3/run_clair3.log "
+    "cp -f {input.bam} {output.bam} "
+    "&& cp -f {input.bai} {output.bai} "
+    "&& cp -f {input.vcf} {output.vcf} "
+    "&& cp -f {input.tbi} {output.tbi} "
+    "&& mkdir -p ../analysis/{wildcards.sample}/logs/clair3 "
+    "&& if [ -d ../analysis/{wildcards.sample}/variants/log ]; then cp -r ../analysis/{wildcards.sample}/variants/log/. ../analysis/{wildcards.sample}/logs/clair3/; fi "
+    "&& if [ -f ../analysis/{wildcards.sample}/variants/run_clair3.log ]; then cp -f ../analysis/{wildcards.sample}/variants/run_clair3.log ../analysis/{wildcards.sample}/logs/clair3/run_clair3.log; fi "
     "; rm ../analysis/{wildcards.sample}/variants/full_alignment.vcf.gz* "
     "; rm ../analysis/{wildcards.sample}/variants/pileup.vcf.gz* "
     "; rm ../analysis/{wildcards.sample}/variants/merge_output.vcf.gz*"
@@ -292,7 +310,7 @@ rule bgzipBedMethyl:
   input:
     "../analysis/{sample}/methylation/{sample}_{haplotype}_pileup.bed"
   output:
-    protected("../analysis/{sample}/methylation/{sample}_{haplotype}_pileup.bed.gz")
+    "../analysis/{sample}/methylation/{sample}_{haplotype}_pileup.bed.gz"
   message:
     "Bgzipping {input}"
   conda:
@@ -309,7 +327,7 @@ rule indexBedMethyl:
   input:
     "../analysis/{sample}/methylation/{sample}_{haplotype}_pileup.bed.gz"
   output:
-    protected("../analysis/{sample}/methylation/{sample}_{haplotype}_pileup.bed.gz.tbi")
+    "../analysis/{sample}/methylation/{sample}_{haplotype}_pileup.bed.gz.tbi"
   message:
     "Indexing {input}"
   conda:
@@ -421,7 +439,7 @@ rule bgzipDmrPairBed:
   input:
     "../analysis/{sample}/methylation/DMR/{sample}_dmrPair_{X}.bed"
   output:
-    protected("../analysis/{sample}/methylation/DMR/{sample}_dmrPair_{X}.bed.gz")
+    "../analysis/{sample}/methylation/DMR/{sample}_dmrPair_{X}.bed.gz"
   message:
     "Bgzipping {input}"
   conda:
@@ -437,7 +455,7 @@ rule indexDmrPairBed:
   input:
     "../analysis/{sample}/methylation/DMR/{sample}_dmrPair_{X}.bed.gz"
   output:
-    protected("../analysis/{sample}/methylation/DMR/{sample}_dmrPair_{X}.bed.gz.tbi")
+    "../analysis/{sample}/methylation/DMR/{sample}_dmrPair_{X}.bed.gz.tbi"
   message:
     "Indexing {input}"
   conda:
@@ -463,7 +481,7 @@ rule sniffles2:
     bai = "../analysis/{sample}/data/{sample}.bam.bai",
     ref = expand("references/{reference}", reference=config["refFile"])
   output:
-    vcf = protected("../analysis/{sample}/structural_variation/{sample}_sniffles2.vcf.gz")
+    vcf = "../analysis/{sample}/structural_variation/{sample}_sniffles2.vcf.gz"
   message:
     "Sniffles2: {wildcards.sample} "
   conda:
@@ -515,7 +533,7 @@ rule bgzipVCF:
   input:
     "../analysis/{sample}/structural_variation/{sample}_cuteSV.vcf"
   output:
-    protected("../analysis/{sample}/structural_variation/{sample}_cuteSV.vcf.gz")
+    "../analysis/{sample}/structural_variation/{sample}_cuteSV.vcf.gz"
   message:
     "Bgzipping CuteSV VCF file: {wildcards.sample}"
   conda:
@@ -532,7 +550,7 @@ rule indexVCF:
   input:
     "../analysis/{sample}/structural_variation/{sample}_cuteSV.vcf.gz"
   output:
-    protected("../analysis/{sample}/structural_variation/{sample}_cuteSV.vcf.gz.tbi")
+    "../analysis/{sample}/structural_variation/{sample}_cuteSV.vcf.gz.tbi"
   message:
     "Indexing CuteSV VCF file: {wildcards.sample}"
   conda:

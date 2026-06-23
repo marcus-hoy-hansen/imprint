@@ -74,10 +74,17 @@ Adaptive sampling runs now also generate:
 
 - QDNAseq copy-number outputs in `analysis_v2/<sample>/CNV/`
 - chromosome-wide variant allele frequency panel plots in `analysis_v2/<sample>/variants/<sample>_variant_panel/`
+- QC validation metrics in `analysis_v2/<sample>/QC/validation_metrics/`
+  - target-region mean coverage
+  - non-target mean coverage
+  - target and non-target read-length summaries
+  - `samtools flagstat`
+  - `samtools stats`
 
 Coverage helper scripts are also available under `scripts/`:
 
 - `target_region_mean_coverage.sh` writes target-region mean coverage plus Q1/median/Q3/mean summary values to a TSV next to a BAM. It currently evaluates both the standard hg38 v2 adaptive sampling BED and the RB GRCh38 v3 BED, then keeps the panel with the higher mean region coverage.
+- `quality_validation.sh` is now also wired into the Snakemake workflows and produces the validation metrics listed above under each sample `QC/validation_metrics/` directory.
 
 ## External Files
 

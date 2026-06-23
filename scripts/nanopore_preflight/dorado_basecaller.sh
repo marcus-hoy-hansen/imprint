@@ -35,6 +35,8 @@ DEFAULT_OUT="${ROOT_BASENAME}_sup.bam"
 OUT_BAM="${2:-$DEFAULT_OUT}"         # name only
 ALIGNED_BAM="${3:-}"
 ENTRY_STAGE="${NP_ENTRY_STAGE:-snakemake}"
+SAMPLE_LOCK_FILE="${NP_SAMPLE_LOCK_FILE:-}"
+SAMPLE_TOKEN="${NP_SAMPLE_TOKEN:-$ROOT_BASENAME}"
 
 DORADO="$NP_DORADO_BASECALLER"
 command -v "$DORADO" >/dev/null || { echo "ERROR: dorado not found at $DORADO"; exit 127; }
@@ -91,10 +93,21 @@ echo "Done: $OUT_PATH"
 
 if [[ -n "$ALIGNED_BAM" ]]; then
   if [[ "$ENTRY_STAGE" == "basecall" ]]; then
+    sample_lock_clear "$SAMPLE_LOCK_FILE"
     echo "Basecall-only mode; alignment and downstream submission skipped"
     exit 0
   fi
 
   echo "Submitting for alignment and nanoimprint"
-  clean_sbatch --export=ALL,NP_ENTRY_STAGE="$ENTRY_STAGE" "${NP_SCRIPT_ROOT}/dorado_align_and_submit.sh" "$OUT_PATH" "$ALIGNED_BAM"
+  submit_output="$(clean_sbatch --export=ALL,NP_ENTRY_STAGE="$ENTRY_STAGE",NP_SAMPLE_LOCK_FILE="$SAMPLE_LOCK_FILE",NP_SAMPLE_TOKEN="$SAMPLE_TOKEN" "${NP_SCRIPT_ROOT}/dorado_align_and_submit.sh" "$OUT_PATH" "$ALIGNED_BAM" "$SAMPLE_TOKEN")"
+  echo "$submit_output"
+
+  if [[ -n "$SAMPLE_LOCK_FILE" ]]; then
+    jobid="$(awk '/Submitted batch job/ {print $4}' <<< "$submit_output")"
+    if [[ -n "$jobid" ]]; then
+      sample_lock_write "$SAMPLE_LOCK_FILE" "align" "$jobid" "$SAMPLE_TOKEN"
+    fi
+  fi
+else
+  sample_lock_clear "$SAMPLE_LOCK_FILE"
 fi

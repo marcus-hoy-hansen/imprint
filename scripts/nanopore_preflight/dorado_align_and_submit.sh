@@ -26,6 +26,7 @@ BAM=$2
 SAMPLE=${3:-$(basename "$BAM" .bam)}
 REF="$NP_REFERENCE"
 ENTRY_STAGE="${NP_ENTRY_STAGE:-snakemake}"
+SAMPLE_LOCK_FILE="${NP_SAMPLE_LOCK_FILE:-}"
 
 DORADO="$NP_DORADO_ALIGNER"
 
@@ -43,6 +44,8 @@ NANODIR="${NP_OUT}/${SAMPLE}/data/raw/"
 mkdir -p "$NANODIR"
 
 cp "${BAM}" "${NANODIR}" -u
+
+sample_lock_clear "$SAMPLE_LOCK_FILE"
 
 if [[ "$ENTRY_STAGE" == "align" ]]; then
     echo "Alignment-only mode; Snakemake submission skipped"

@@ -15,6 +15,14 @@ rule all:
 
         # QC
         expand(ANALYSIS + "/QC/{sample}_NanoPlot-report.html", sample=config["sample"]),
+        expand(ANALYSIS + "/QC/validation_metrics/{sample}.{suffix}", sample=config["sample"], suffix=[
+            "target_region_mean_coverage.tsv",
+            "non_target_mean_coverage.txt",
+            "target_read_length_stats.txt",
+            "non_target_read_length_stats.txt",
+            "flagstat.txt",
+            "stats.txt"
+        ]),
     
         # VARIANT CALLING
         expand(ANALYSIS + "/variants/{sample}_clair3.vcf.gz", sample=config["sample"]),
@@ -75,6 +83,7 @@ use rule indexMergedBAM from common
 #                QUALITY CONTROL                 #
 ##################################################
 use rule nanoPlot from common
+use rule qualityValidation from common
 
 
 

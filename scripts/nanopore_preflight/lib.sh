@@ -38,3 +38,30 @@ clean_sbatch() {
     -u SLURM_MEM_PER_NODE \
     sbatch "$@"
 }
+
+sample_lock_write() {
+  local lock_file="$1"
+  local stage="$2"
+  local jobid="$3"
+  local sample_token="${4:-}"
+  local tmp_file
+
+  mkdir -p "$(dirname "$lock_file")"
+  tmp_file="${lock_file}.tmp.$$"
+
+  {
+    printf 'stage=%s\n' "$stage"
+    printf 'jobid=%s\n' "$jobid"
+    printf 'sample=%s\n' "$sample_token"
+    printf 'time=%s\n' "$(date -Is)"
+    printf 'host=%s\n' "$(hostname)"
+  } > "$tmp_file"
+
+  mv "$tmp_file" "$lock_file"
+}
+
+sample_lock_clear() {
+  local lock_file="${1:-}"
+  [[ -n "$lock_file" ]] || return 0
+  rm -f "$lock_file"
+}

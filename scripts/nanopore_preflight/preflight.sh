@@ -61,6 +61,7 @@ fi
 BASE=${ARGS[0]:-$NP_BASE}
 STORAGE_BASE="$NP_STORAGE_BASE"
 BASECALLER_SBATCH="${NP_BASECALLER_SBATCH:-${NP_SCRIPT_ROOT}/dorado_basecaller.sh}"
+LOCK_ROOT="${NP_WATCH_STATE_DIR}/sample_locks"
 
 # If user requests CPU/test mode but left default GPU sbatch, switch to CPU header.
 if [[ "${NP_DORADO_DEVICE:-}" == "cpu" || "${NP_DORADO_TEST_MODE:-0}" == "1" ]]; then
@@ -70,6 +71,34 @@ if [[ "${NP_DORADO_DEVICE:-}" == "cpu" || "${NP_DORADO_TEST_MODE:-0}" == "1" ]];
 fi
 
 status=0
+
+submit_stage_with_lock() {
+  local lock_file="$1"
+  local sample_token="$2"
+  local stage="$3"
+  shift 3
+
+  local submit_output
+  local jobid
+
+  sample_lock_write "$lock_file" "$stage" "pending" "$sample_token"
+
+  if ! submit_output="$(clean_sbatch "$@")"; then
+    sample_lock_clear "$lock_file"
+    return 1
+  fi
+
+  echo "$submit_output"
+
+  jobid="$(awk '/Submitted batch job/ {print $4}' <<< "$submit_output")"
+  if [[ -z "$jobid" ]]; then
+    echo "ERROR: failed to parse sbatch job id for $sample_token ($stage)" >&2
+    sample_lock_clear "$lock_file"
+    return 1
+  fi
+
+  sample_lock_write "$lock_file" "$stage" "$jobid" "$sample_token"
+}
 
 declare -a exp_dirs=()
 while IFS= read -r -d '' dir; do
@@ -140,9 +169,46 @@ for exp_dir in "${exp_dirs[@]}"; do
       analysis_raw_dir="${analysis_sample_dir}/data/raw"
       analysis_raw_bam="${analysis_raw_dir}/${sample_token}.bam"
       varseq_marker="${analysis_sample_dir}/varseq/${sample_token}_varseq_submitted.txt"
+      lock_file="${LOCK_ROOT}/${sample_token}.lock"
       downstream_stage="$ENTRY_STAGE"
       if [[ "$CONTINUE_AFTER_ENTRY" -eq 1 ]]; then
         downstream_stage="snakemake"
+      fi
+
+      if [[ -f "$lock_file" ]]; then
+        lock_stage="$(awk -F= '/^stage=/{print $2}' "$lock_file" | tail -n 1)"
+        lock_jobid="$(awk -F= '/^jobid=/{print $2}' "$lock_file" | tail -n 1)"
+
+        if [[ "$lock_jobid" == "pending" ]]; then
+          echo "  [$sample_name] Submission lock exists for stage $lock_stage; skipping"
+          continue
+        fi
+
+        if [[ -n "$lock_jobid" ]] && command -v squeue >/dev/null 2>&1 && squeue -h -j "$lock_jobid" 2>/dev/null | grep -q .; then
+          echo "  [$sample_name] Active lock exists for stage $lock_stage (job $lock_jobid); skipping"
+          continue
+        fi
+
+        case "$lock_stage" in
+          basecall)
+            lock_expected="$basecalled_bam"
+            ;;
+          align)
+            lock_expected="$aligned_bam"
+            ;;
+          *)
+            echo "  [$sample_name] Unknown lock stage '$lock_stage'; skipping for manual review"
+            continue
+            ;;
+        esac
+
+        if [[ -s "$lock_expected" ]]; then
+          echo "  [$sample_name] Clearing stale $lock_stage lock; expected output exists"
+          sample_lock_clear "$lock_file"
+        else
+          echo "  [$sample_name] Stale $lock_stage lock detected; expected output missing; skipping"
+          continue
+        fi
       fi
 
       if [[ "$ENTRY_STAGE" == "align" ]]; then
@@ -169,7 +235,9 @@ for exp_dir in "${exp_dirs[@]}"; do
         fi
 
         echo "  [$sample_name] Submitting alignment directly -> $aligned_bam"
-        clean_sbatch --export=ALL,NP_ENTRY_STAGE="$downstream_stage" "${NP_SCRIPT_ROOT}/dorado_align_and_submit.sh" "$basecalled_bam" "$aligned_bam" "$sample_token"
+        submit_stage_with_lock "$lock_file" "$sample_token" "align" \
+          --export=ALL,NP_ENTRY_STAGE="$downstream_stage",NP_SAMPLE_LOCK_FILE="$lock_file",NP_SAMPLE_TOKEN="$sample_token" \
+          "${NP_SCRIPT_ROOT}/dorado_align_and_submit.sh" "$basecalled_bam" "$aligned_bam" "$sample_token"
         continue
       fi
 
@@ -201,7 +269,9 @@ for exp_dir in "${exp_dirs[@]}"; do
 
         if [[ -s "$basecalled_bam" ]]; then
           echo "  [$sample_name] Basecalled BAM exists; submitting alignment -> $aligned_bam"
-          clean_sbatch --export=ALL,NP_ENTRY_STAGE=snakemake "${NP_SCRIPT_ROOT}/dorado_align_and_submit.sh" "$basecalled_bam" "$aligned_bam" "$sample_token"
+          submit_stage_with_lock "$lock_file" "$sample_token" "align" \
+            --export=ALL,NP_ENTRY_STAGE=snakemake,NP_SAMPLE_LOCK_FILE="$lock_file",NP_SAMPLE_TOKEN="$sample_token" \
+            "${NP_SCRIPT_ROOT}/dorado_align_and_submit.sh" "$basecalled_bam" "$aligned_bam" "$sample_token"
           continue
         fi
       elif [[ "$ENTRY_STAGE" == "basecall" && -s "$basecalled_bam" ]]; then
@@ -221,7 +291,9 @@ for exp_dir in "${exp_dirs[@]}"; do
       sleep 10
       echo "  [$sample_name] Submitting Dorado basecaller -> $basecalled_bam"
 
-      clean_sbatch --export=ALL,NP_ENTRY_STAGE="$downstream_stage" "${BASECALLER_SBATCH}" "${dest}/${sample_name}" "${sample_name}${supsuffix}.bam" "$aligned_bam"
+      submit_stage_with_lock "$lock_file" "$sample_token" "basecall" \
+        --export=ALL,NP_ENTRY_STAGE="$downstream_stage",NP_SAMPLE_LOCK_FILE="$lock_file",NP_SAMPLE_TOKEN="$sample_token" \
+        "${BASECALLER_SBATCH}" "${dest}/${sample_name}" "${sample_name}${supsuffix}.bam" "$aligned_bam"
     else
       status=1
     fi
