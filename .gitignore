@@ -1,6 +1,7 @@
 .snakemake/
 logs/
 .watch_state/
+.trash/
 *.out
 *.err
 .codex

@@ -49,6 +49,7 @@ fi
 
 
 # Activate environment
+export PATH="/home/$USER/miniforge3/condabin:/home/$USER/miniforge3/bin:$PATH"
 source /home/$USER/miniforge3/etc/profile.d/conda.sh
 conda activate snakemake_env
 

@@ -6,6 +6,34 @@
 
 ---
 
+Updated Jul 27, 2026 /Codex
+
+• Released workflow version `0.2.0`.
+
+• Updated the NanoPlot environment to `nanoplot==1.47.1` on Python `3.11`.
+
+• Updated the NanoPlot rule to use:
+
+  `--huge --plots dot -f png`
+
+• Added `scripts/t2t_qc_align_sort.sh` as a standalone QC helper for Dorado SUP BAM to T2T align/sort/index.
+
+• Added an optional T2T Snakemake branch, available in both AS and WGS workflows, with rules:
+
+  `t2tRevertBAM`, `t2tAlignBAM`, `t2tSortBAM`, `t2tIndexBAM`
+
+• Kept the optional T2T branch out of `rule all` so the standard pipeline behavior is unchanged.
+
+• Added config keys `t2tRefFile`, `picardJar`, and `doradoAligner` to support the optional T2T branch.
+
+• Added profile resources for the optional T2T branch in both `profiles/AS/config.yaml` and `profiles/WGS/config.yaml`.
+
+• Added `scripts/quality_validation.sh` integration to the workflow QC path and documented the validation outputs in `README.md`.
+
+• Updated `scripts/runSnakemake.sh` so Snakemake can find `conda` while creating rule-specific environments.
+
+---
+
 Updated Jun 23, 2026 /Codex
 
 • Added Snakemake rule `qualityValidation` to both AS and WGS workflows using `scripts/quality_validation.sh`.

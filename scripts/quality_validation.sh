@@ -1,12 +1,4 @@
-#!/bin/bash
-#SBATCH --job-name=Qval
-#SBATCH --account=nanopore_kga
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=4G
-#SBATCH --time=5:00:00
-#SBATCH --output=logs/Qval.out
-
-
+#!/usr/bin/env bash
 set -euo pipefail
 
 resolve_script_dir() {

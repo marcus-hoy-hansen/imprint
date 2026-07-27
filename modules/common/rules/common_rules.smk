@@ -75,6 +75,79 @@ rule indexMergedBAM:
     "--threads {threads}"
 
 
+# Optional T2T QC branch. Not part of rule all; target the final BAM explicitly when needed.
+rule t2tRevertBAM:
+  input:
+    bam = ANALYSIS + "/data/{sample}.bam",
+    bai = ANALYSIS + "/data/{sample}.bam.bai"
+  output:
+    temp(ANALYSIS + "/data/{sample}.t2t_unmapped.bam")
+  message:
+    "Reverting BAM for optional T2T alignment: {wildcards.sample}"
+  conda:
+    "../../../envs/picard_env.yaml"
+  params:
+    picard = config["picardJar"],
+    tmp_dir = ANALYSIS + "/data/tmp_t2t_revert"
+  shell:
+    "mkdir -p {params.tmp_dir} "
+    "&& java -Xmx24G -jar {params.picard} RevertSam "
+    "I={input.bam} "
+    "O={output} "
+    "VALIDATION_STRINGENCY=SILENT "
+    "TMP_DIR={params.tmp_dir}"
+
+
+rule t2tAlignBAM:
+  input:
+    bam = ANALYSIS + "/data/{sample}.t2t_unmapped.bam",
+    ref = expand("{referenceDir}/{reference}", referenceDir=config["referenceDir"], reference=config["t2tRefFile"])
+  output:
+    temp(ANALYSIS + "/data/{sample}.t2t_unsorted.bam")
+  message:
+    "Optional T2T alignment: {wildcards.sample}"
+  params:
+    dorado = config["doradoAligner"]
+  shell:
+    "{params.dorado} aligner "
+    "{input.ref} "
+    "{input.bam} "
+    "--mm2-opts \"-Y\" "
+    "--threads {threads} "
+    "> {output}"
+
+
+rule t2tSortBAM:
+  input:
+    ANALYSIS + "/data/{sample}.t2t_unsorted.bam"
+  output:
+    ANALYSIS + "/data/{sample}.t2t.sorted.bam"
+  message:
+    "Sorting optional T2T BAM: {wildcards.sample}"
+  conda:
+    "../../../envs/samtools.yaml"
+  shell:
+    "samtools sort "
+    "{input} "
+    "-o {output} "
+    "-@ {threads}"
+
+
+rule t2tIndexBAM:
+  input:
+    ANALYSIS + "/data/{sample}.t2t.sorted.bam"
+  output:
+    ANALYSIS + "/data/{sample}.t2t.sorted.bam.bai"
+  message:
+    "Indexing optional T2T BAM: {wildcards.sample}"
+  conda:
+    "../../../envs/samtools.yaml"
+  shell:
+    "samtools index "
+    "{input} "
+    "--threads {threads}"
+
+
 
 ##################################################
 #                QUALITY CONTROL                 #
@@ -93,7 +166,10 @@ rule nanoPlot:
     "../../../envs/nanoPlot.yaml"
   params:
     "--prefix {sample}_",
-    "--N50"
+    "--N50",
+    "--huge",
+    "--plots dot",
+    "-f png"
   shell:
     "NanoPlot "
     "--bam {input.bam} "
@@ -115,6 +191,8 @@ rule qualityValidation:
     stats = ANALYSIS + "/QC/validation_metrics/{sample}.stats.txt"
   message:
     "Quality validation: {wildcards.sample}"
+  conda:
+    "../../../envs/samtools.yaml"
   shell:
     "bash scripts/quality_validation.sh {input.bam}"
 

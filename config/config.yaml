@@ -19,6 +19,9 @@ minimumCoverage: 5
 dataDir: ../STORAGE/resources/data
 referenceDir: ../STORAGE/resources/references
 softwareDir: ../STORAGE/resources/software
+t2tRefFile: GCF_009914755.1_T2T-CHM13v2.0_genomic.fna
+picardJar: /faststorage/project/nanopore_kga/development/software/picard.jar
+doradoAligner: /home/marcushh/dorado-1.2.0-linux-x64/bin/dorado
 varseqHost: varseq-02
 varseqRemoteScript: /faststorage/project/nanopore_kga/workflow_dev/scripts/varseq_remote_runner.sh
 varseqTemplate: /faststorage/project/nanopore_kga/workflow/varseqtemplates/Imprinting_ONT-LR-seq_HG38_v2.vsproject-template
