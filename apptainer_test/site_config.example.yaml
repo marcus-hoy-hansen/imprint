@@ -1,0 +1,24 @@
+# Example site configuration for a future production containerized workflow.
+
+reference_dir: /faststorage/project/nanopore_kga/STORAGE/resources/references
+data_dir: /faststorage/project/nanopore_kga/STORAGE/resources/data
+software_dir: /faststorage/project/nanopore_kga/STORAGE/resources/software
+
+ref_file: hg38_noAlt.fasta
+t2t_ref_file: GCF_009914755.1_T2T-CHM13v2.0_genomic.fna
+clair3_model: r1041_e82_400bps_hac_v430
+
+clair3_model_dir: /faststorage/project/nanopore_kga/STORAGE/resources/software/clair3_models
+dorado_bin: /home/marcushh/dorado-1.2.0-linux-x64/bin/dorado
+dorado_models_dir: /faststorage/project/nanopore_kga/STORAGE/resources/software/dorado_models
+
+analysis_dir: /faststorage/project/nanopore_kga/analysis_v2
+
+varseq_host: varseq-02
+varseq_submit_host: fe-open-01
+varseq_remote_script: /faststorage/project/nanopore_kga/workflow_dev/scripts/varseq_remote_runner.sh
+
+as_bed_dir: /faststorage/project/nanopore_kga/development/adaptiveSamplingBed
+
+# Optional future setting:
+# run_nanoplot: true

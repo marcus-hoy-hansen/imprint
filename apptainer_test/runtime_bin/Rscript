@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="/opt/workflow"
+if [[ $# -gt 0 ]]; then
+  case "$1" in
+    *NanoImprint_v2.0.Rmd)
+      exec "${ROOT}/runtime_envs/nanoimprint/bin/Rscript" "$@"
+      ;;
+    *qdna_stable_cli.R)
+      exec "${ROOT}/runtime_envs/qdna/bin/Rscript" "$@"
+      ;;
+  esac
+fi
+
+exec "${ROOT}/runtime_envs/qdna/bin/Rscript" "$@"
+

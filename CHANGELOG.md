@@ -6,6 +6,49 @@
 
 ---
 
+Updated Aug 5, 2026 /Codex
+
+• Released workflow version `1.0.0`.
+
+• Moved standard alignment responsibility fully into Snakemake. The normal workflow now starts from raw/basecalled SUP BAMs staged under `analysis_v2/<sample>/data/raw/`.
+
+• Simplified raw BAM preparation by replacing the old `BAMlist` + `mergeBAMs` path with `prepareRawBAM`:
+
+  - if `0` BAMs are present in `data/raw/`: fail clearly
+  - if `1` BAM is present: use it directly
+  - if multiple BAMs are present: merge them with `samtools`
+
+• Updated the standard hg38 workflow path to:
+
+  `prepareRawBAM -> alignMergedBAM -> sortMergedBAM -> indexMergedBAM`
+
+• Extended the optional T2T branch in both AS and WGS workflows to support:
+
+  `t2tAlignBAM`, `t2tSortBAM`, `t2tIndexBAM`, `t2tClair3`
+
+• Kept the T2T branch outside `rule all` so it remains opt-in and does not alter the default pipeline scope.
+
+• Collapsed the previous extra T2T Clair3 cleanup layer. `t2tClair3` now writes the final optional outputs directly:
+
+  - `data/{sample}.t2t.sorted.bam`
+  - `data/{sample}.t2t.sorted.bam.bai`
+  - `data/{sample}.t2t.haplotagged.bam`
+  - `data/{sample}.t2t.haplotagged.bam.bai`
+  - `variants/{sample}_t2t_clair3.vcf.gz`
+  - `variants/{sample}_t2t_clair3.vcf.gz.tbi`
+
+• Updated Clair3 configuration to use the SUP model:
+
+  `r1041_e82_400bps_sup_v520`
+
+• Updated the configured Dorado binary path to:
+
+  `/faststorage/project/nanopore_kga/tools/dorado-2.1.1-linux-x64/bin/dorado`
+
+• Added and documented an Apptainer workflow test area under `apptainer_test/`, including a baked-runtime prototype, runtime wrapper scripts, and usage notes for containerized pipeline testing.
+
+---
+
 Updated Jul 27, 2026 /Codex
 
 • Released workflow version `0.2.0`.

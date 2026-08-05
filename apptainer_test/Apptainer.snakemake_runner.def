@@ -1,0 +1,16 @@
+Bootstrap: docker
+From: snakemake/snakemake:v9.11.0
+
+%labels
+    Author workflow_dev
+    Description Snakemake runner image for full-pipeline Apptainer pilot on GenomeDK
+
+%post
+    mkdir -p /opt/test
+
+%environment
+    export LC_ALL=C
+    export LANG=C
+
+%runscript
+    exec "$@"

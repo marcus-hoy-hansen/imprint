@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+exec /opt/workflow/runtime_envs/bcftools/bin/bcftools "$@"
+

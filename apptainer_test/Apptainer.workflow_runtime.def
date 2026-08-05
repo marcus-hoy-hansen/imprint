@@ -1,0 +1,36 @@
+Bootstrap: docker
+From: snakemake/snakemake:v9.11.0
+
+%labels
+    Author workflow_dev
+    Description Baked workflow runtime with prebuilt tool environments and external refs/models
+
+%files
+    config /opt/workflow/config
+    envs /opt/workflow/envs
+    modules /opt/workflow/modules
+    profiles /opt/workflow/profiles
+    scripts /opt/workflow/scripts
+    workflows /opt/workflow/workflows
+    apptainer_test/runtime_bin /opt/workflow/apptainer_test/runtime_bin
+    apptainer_test/container_entrypoint_baked.sh /opt/workflow/apptainer_test/container_entrypoint_baked.sh
+    apptainer_test/runtime_site.conf /opt/workflow/apptainer_test/runtime_site.conf
+    apptainer_test/runtime_envs.tar /opt/workflow/apptainer_test/runtime_envs.tar
+
+%post
+    mkdir -p /opt/workflow /opt/workflow/apptainer_test /opt/workflow/runtime_envs
+    chmod +x /opt/workflow/apptainer_test/runtime_bin/* || true
+    chmod +x /opt/workflow/apptainer_test/container_entrypoint_baked.sh || true
+    ln -s /opt/workflow/apptainer_test/runtime_bin /opt/workflow/runtime_bin || true
+    tar -xf /opt/workflow/apptainer_test/runtime_envs.tar -C /opt/workflow/runtime_envs --strip-components=1
+    rm -f /opt/workflow/apptainer_test/runtime_envs.tar
+
+%environment
+    export LC_ALL=C
+    export LANG=C
+    export PATH=/opt/workflow/runtime_bin:$PATH
+    export NP_CONDA_ENV=""
+    export NP_CONDA_PROFILE=""
+
+%runscript
+    exec "$@"

@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="/opt/workflow"
+if [[ $# -gt 0 ]]; then
+  case "$1" in
+    *scripts/straglr.py)
+      exec "${ROOT}/runtime_envs/straglr/bin/python" "$@"
+      ;;
+    *chrom_variantallelefrequencies_panel.py|*chrom_variantallelefrequencies_panel_cytoband.py)
+      exec "${ROOT}/runtime_envs/variant_panel/bin/python" "$@"
+      ;;
+  esac
+fi
+
+exec "${ROOT}/runtime_envs/workflow_py/bin/python" "$@"
+

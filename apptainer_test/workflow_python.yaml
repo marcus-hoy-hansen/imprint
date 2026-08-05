@@ -1,0 +1,17 @@
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.11
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib
+  - seaborn
+  - plotly
+  - pyarrow
+  - pysam
+  - pybedtools
+  - biopython
+  - pyfaidx
+

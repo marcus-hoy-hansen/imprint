@@ -1,0 +1,16 @@
+Bootstrap: docker
+From: quay.io/biocontainers/samtools:1.20--h50ea8bc_0
+
+%labels
+    Author workflow_dev
+    Description Minimal samtools Apptainer test image for Snakemake on GenomeDK
+
+%post
+    mkdir -p /opt/test
+
+%environment
+    export LC_ALL=C
+    export LANG=C
+
+%runscript
+    exec samtools "$@"

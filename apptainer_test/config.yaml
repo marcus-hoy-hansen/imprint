@@ -1,0 +1,5 @@
+sample: 05483-13_hg38_ASv2
+input_bam: /faststorage/project/nanopore_kga/analysis_v2/05483-13_hg38_ASv2/data/05483-13_hg38_ASv2.bam
+output_dir: /faststorage/project/nanopore_kga/workflow_dev/apptainer_test/output
+container: /faststorage/project/nanopore_kga/workflow_dev/apptainer_test/containers/samtools_1.20.sif
+subset_reads: 1000

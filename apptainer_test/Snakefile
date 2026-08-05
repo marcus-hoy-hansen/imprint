@@ -1,0 +1,45 @@
+configfile: "config.yaml"
+
+SAMPLE = config["sample"]
+INPUT_BAM = config["input_bam"]
+OUTPUT_DIR = config["output_dir"]
+CONTAINER = config["container"]
+SUBSET_READS = config["subset_reads"]
+SUBSET_BAM = f"{OUTPUT_DIR}/{SAMPLE}.subset_{SUBSET_READS}.bam"
+SUBSET_BAI = f"{SUBSET_BAM}.bai"
+FLAGSTAT = f"{OUTPUT_DIR}/{SAMPLE}.subset_{SUBSET_READS}.flagstat.txt"
+
+rule all:
+    input:
+        FLAGSTAT
+
+
+rule subset_bam_test:
+    input:
+        bam=INPUT_BAM
+    output:
+        bam=SUBSET_BAM,
+        bai=SUBSET_BAI
+    singularity:
+        CONTAINER
+    shell:
+        r"""
+        mkdir -p {OUTPUT_DIR}
+        set +o pipefail
+        samtools view -h {input.bam} \
+          | awk 'BEGIN {{n=0}} /^@/ {{print; next}} n < {SUBSET_READS} {{print; n++}} n == {SUBSET_READS} {{exit}}' \
+          | samtools view -b -o {output.bam}
+        set -o pipefail
+        samtools index {output.bam}
+        """
+
+
+rule flagstat_test:
+    input:
+        bam=SUBSET_BAM
+    output:
+        FLAGSTAT
+    singularity:
+        CONTAINER
+    shell:
+        "mkdir -p {OUTPUT_DIR} && samtools flagstat {input.bam} > {output}"

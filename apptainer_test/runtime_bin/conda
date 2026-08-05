@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+echo "Runtime container does not support dynamic conda solves." >&2
+echo "All workflow tools are expected to be pre-baked into /opt/workflow/runtime_envs." >&2
+exit 2
+
