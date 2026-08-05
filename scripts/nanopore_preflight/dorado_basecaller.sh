@@ -10,7 +10,7 @@
 #SBATCH --error=%x-%j.err
 
 # Usage:
-#   sbatch dorado_basecaller.sh <RUN_SAMPLE_ROOT> [OUT_BAM] [ALIGNED_BAM]
+#   sbatch dorado_basecaller.sh <RUN_SAMPLE_ROOT> [OUT_BAM] [ANALYSIS_RAW_BAM]
 # Example:
 #   sbatch dorado_basecaller.sh upload_batch_adaptive/sample
 #   -> outputs upload_batch_adaptive/sample/sample_sup.bam
@@ -25,7 +25,7 @@ source "${CONFIG_FILE}"
 source "${NP_SCRIPT_ROOT}/lib.sh"
 
 if [[ $# -lt 1 ]]; then
-  echo "Usage: $0 <RUN_SAMPLE_ROOT> [OUT_BAM] [ALIGNED_BAM]" >&2
+  echo "Usage: $0 <RUN_SAMPLE_ROOT> [OUT_BAM] [ANALYSIS_RAW_BAM]" >&2
   exit 1
 fi
 
@@ -33,7 +33,7 @@ ROOT="$1"                            # e.g. upload_batch_adaptive/sample
 ROOT_BASENAME="$(basename "$ROOT")"  # e.g. sample
 DEFAULT_OUT="${ROOT_BASENAME}_sup.bam"
 OUT_BAM="${2:-$DEFAULT_OUT}"         # name only
-ALIGNED_BAM="${3:-}"
+ANALYSIS_RAW_BAM="${3:-}"
 ENTRY_STAGE="${NP_ENTRY_STAGE:-snakemake}"
 SAMPLE_LOCK_FILE="${NP_SAMPLE_LOCK_FILE:-}"
 SAMPLE_TOKEN="${NP_SAMPLE_TOKEN:-$ROOT_BASENAME}"
@@ -91,23 +91,18 @@ fi
 
 echo "Done: $OUT_PATH"
 
-if [[ -n "$ALIGNED_BAM" ]]; then
-  if [[ "$ENTRY_STAGE" == "basecall" ]]; then
-    sample_lock_clear "$SAMPLE_LOCK_FILE"
-    echo "Basecall-only mode; alignment and downstream submission skipped"
-    exit 0
-  fi
+if [[ -n "$ANALYSIS_RAW_BAM" ]]; then
+  mkdir -p "$(dirname "$ANALYSIS_RAW_BAM")"
+  cp -u "$OUT_PATH" "$ANALYSIS_RAW_BAM"
+fi
 
-  echo "Submitting for alignment and nanoimprint"
-  submit_output="$(clean_sbatch --export=ALL,NP_ENTRY_STAGE="$ENTRY_STAGE",NP_SAMPLE_LOCK_FILE="$SAMPLE_LOCK_FILE",NP_SAMPLE_TOKEN="$SAMPLE_TOKEN" "${NP_SCRIPT_ROOT}/dorado_align_and_submit.sh" "$OUT_PATH" "$ALIGNED_BAM" "$SAMPLE_TOKEN")"
-  echo "$submit_output"
+sample_lock_clear "$SAMPLE_LOCK_FILE"
 
-  if [[ -n "$SAMPLE_LOCK_FILE" ]]; then
-    jobid="$(awk '/Submitted batch job/ {print $4}' <<< "$submit_output")"
-    if [[ -n "$jobid" ]]; then
-      sample_lock_write "$SAMPLE_LOCK_FILE" "align" "$jobid" "$SAMPLE_TOKEN"
-    fi
-  fi
-else
-  sample_lock_clear "$SAMPLE_LOCK_FILE"
+if [[ "$ENTRY_STAGE" == "basecall" ]]; then
+  echo "Basecall-only mode; Snakemake submission skipped"
+  exit 0
+fi
+
+if [[ "$ENTRY_STAGE" == "snakemake" ]]; then
+  clean_sbatch --export=ALL,CONFIG_FILE="${CONFIG_FILE:-}",NP_CONFIG_FILE="${NP_CONFIG_FILE:-}",NP_ANALYSIS_DIR="${NP_OUT}" "${NP_SNAKEMAKE_SCRIPT}" "${SAMPLE_TOKEN}"
 fi

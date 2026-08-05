@@ -1,6 +1,6 @@
 # Nanopore Preflight Pipeline
 
-A helper bundle to check uploaded Nanopore runs, copy them to storage, basecall with Dorado, align, and launch downstream nanoimprint analysis.
+A helper bundle to check uploaded Nanopore runs, copy them to storage, basecall with Dorado, and launch downstream Snakemake analysis.
 
 ## Layout
 
@@ -8,7 +8,7 @@ A helper bundle to check uploaded Nanopore runs, copy them to storage, basecall 
 - `lib.sh` — shared config loading and helper functions.
 - `preflight.sh` — checks uploaded run structure, copies passing samples to `STORAGE`, and starts the downstream chain.
 - `dorado_basecaller.sh` — GPU basecalling job; can stop after basecalling or continue to alignment.
-- `dorado_align_and_submit.sh` — alignment job; copies aligned BAM into the analysis tree and can stop before or continue to Snakemake.
+- `dorado_align_and_submit.sh` — legacy alignment helper retained for manual use.
 - `dorado_basecaller_cpu_test.sh` — CPU-only limited-read test wrapper.
 - `nanopore_imprint_scheduler.sh` — optional Slurm watcher for periodic preflight runs.
 
@@ -18,7 +18,7 @@ A helper bundle to check uploaded Nanopore runs, copy them to storage, basecall 
 
 - `preflight` — file checks only
 - `basecall` — checks, copy to storage if needed, then submit Dorado basecalling
-- `align` — checks, derive the expected basecalled BAM path, then submit alignment directly
+- `align` — legacy alias that stages an existing basecalled SUP BAM into the analysis tree
 - `snakemake` — checks, derive the sample token, then submit `runSnakemake.sh` directly
 
 Add `--continue` to continue downstream after `preflight`, `basecall`, or `align`.
@@ -106,8 +106,8 @@ The preflight chain expects these external resources to be available outside Git
 - Preflight no longer checks for BAM files and supports POD5-only input.
 - Samples are currently copied from `uploaded` to `STORAGE` with `cp -r`.
 - `--entry align` assumes the expected basecalled BAM already exists in `STORAGE/<experiment>/<sample>/`.
-- `--entry align --continue` runs alignment and then submits Snakemake.
-- `--entry snakemake` assumes the workflow inputs already exist where `runSnakemake.sh` expects them.
+- `--entry align --continue` copies that SUP BAM into `analysis_v2/<sample>/data/raw/` and then submits Snakemake.
+- `--entry snakemake` will also stage the SUP BAM into `analysis_v2/<sample>/data/raw/` when it is present in storage but not yet copied.
 - `--entry preflight --continue` skips samples that already have the final VarSeq marker.
 - Use `--entry snakemake` when you need to resubmit Snakemake for already-finished samples.
 - Default analysis output root is `${NP_PROJECT_ROOT}/analysis_v2`.

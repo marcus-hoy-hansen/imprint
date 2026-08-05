@@ -10,41 +10,56 @@ WILDCARD_ANALYSIS = analysis_dir + "/{wildcards.sample}"
 #                DATA PREPARATION                #
 ##################################################
 
-# Create list of all intermediate BAM files from sequencing
-rule BAMlist:
-  output:
-    temp(ANALYSIS + "/data/bamlist.txt")
-  message:
-    "Creating list of bam files to be merged: {wildcards.sample}"
-  params:
-    rawDir = ANALYSIS + "/data/raw"
-  shell:
-    "ls -d {params.rawDir}/*.* | grep '.bam' | grep -v '.bai' > {output}"
-
-
-
-# Merge intermediate BAM files
-rule mergeBAMs:
-  input:
-    ANALYSIS + "/data/bamlist.txt"
+rule prepareRawBAM:
   output:
     temp(ANALYSIS + "/data/{sample}_unSorted.bam")
   message:
-    "Merging BAMs: {wildcards.sample}"
+    "Preparing raw SUP BAM input: {wildcards.sample}"
+  params:
+    rawDir = ANALYSIS + "/data/raw"
   conda:
     "../../../envs/samtools.yaml"
-  shell:    
-    "samtools merge "
-    "-b {input} "
-    "-o {output} "
-    "--threads {threads}"
+  shell:
+    r"""
+    set -euo pipefail
+    mapfile -t bams < <(find {params.rawDir} -maxdepth 1 -type f -name '*.bam' ! -name '*.bai' | sort)
+    count="${{#bams[@]}}"
+    if [ "$count" -eq 0 ]; then
+      echo "ERROR: no BAM files found in {params.rawDir}" >&2
+      exit 1
+    elif [ "$count" -eq 1 ]; then
+      cp -f "${{bams[0]}}" {output}
+    else
+      printf '%s\n' "${{bams[@]}}" > {output}.bamlist.txt
+      samtools merge -b {output}.bamlist.txt -o {output} --threads {threads}
+      rm -f {output}.bamlist.txt
+    fi
+    """
 
 
+rule alignMergedBAM:
+  input:
+    bam = ANALYSIS + "/data/{sample}_unSorted.bam",
+    ref = expand("{referenceDir}/{reference}", referenceDir=config["referenceDir"], reference=config["refFile"])
+  output:
+    temp(ANALYSIS + "/data/{sample}_aligned_unSorted.bam")
+  message:
+    "Aligning merged SUP BAM: {wildcards.sample}"
+  params:
+    dorado = config["doradoAligner"]
+  shell:
+    "{params.dorado} aligner "
+    "{input.ref} "
+    "{input.bam} "
+    "--mm2-opts \"-Y\" "
+    "--threads {threads} "
+    "> {output}"
 
-# Sort merged BAM
+
+# Sort aligned BAM
 rule sortMergedBAM:
   input:
-    ANALYSIS + "/data/{sample}_unSorted.bam"
+    ANALYSIS + "/data/{sample}_aligned_unSorted.bam"
   output:
     ANALYSIS + "/data/{sample}.bam"
   message:
@@ -58,14 +73,13 @@ rule sortMergedBAM:
     "-@ {threads}"
 
 
-
-# Index merged BAM
+# Index aligned BAM
 rule indexMergedBAM:
   input:
     ANALYSIS + "/data/{sample}.bam"
   output:
     ANALYSIS + "/data/{sample}.bam.bai"
-  message:  
+  message:
     "Indexing {input}"
   conda:
     "../../../envs/samtools.yaml"
@@ -76,31 +90,9 @@ rule indexMergedBAM:
 
 
 # Optional T2T QC branch. Not part of rule all; target the final BAM explicitly when needed.
-rule t2tRevertBAM:
-  input:
-    bam = ANALYSIS + "/data/{sample}.bam",
-    bai = ANALYSIS + "/data/{sample}.bam.bai"
-  output:
-    temp(ANALYSIS + "/data/{sample}.t2t_unmapped.bam")
-  message:
-    "Reverting BAM for optional T2T alignment: {wildcards.sample}"
-  conda:
-    "../../../envs/picard_env.yaml"
-  params:
-    picard = config["picardJar"],
-    tmp_dir = ANALYSIS + "/data/tmp_t2t_revert"
-  shell:
-    "mkdir -p {params.tmp_dir} "
-    "&& java -Xmx24G -jar {params.picard} RevertSam "
-    "I={input.bam} "
-    "O={output} "
-    "VALIDATION_STRINGENCY=SILENT "
-    "TMP_DIR={params.tmp_dir}"
-
-
 rule t2tAlignBAM:
   input:
-    bam = ANALYSIS + "/data/{sample}.t2t_unmapped.bam",
+    bam = ANALYSIS + "/data/{sample}_unSorted.bam",
     ref = expand("{referenceDir}/{reference}", referenceDir=config["referenceDir"], reference=config["t2tRefFile"])
   output:
     temp(ANALYSIS + "/data/{sample}.t2t_unsorted.bam")
@@ -146,6 +138,45 @@ rule t2tIndexBAM:
     "samtools index "
     "{input} "
     "--threads {threads}"
+
+
+rule t2tClair3:
+  input:
+    bam = ANALYSIS + "/data/{sample}.t2t.sorted.bam",
+    bai = ANALYSIS + "/data/{sample}.t2t.sorted.bam.bai",
+    ref = expand("{referenceDir}/{reference}", referenceDir=config["referenceDir"], reference=config["t2tRefFile"])
+  output:
+    vcf = ANALYSIS + "/variants/{sample}_t2t_clair3.vcf.gz",
+    tbi = ANALYSIS + "/variants/{sample}_t2t_clair3.vcf.gz.tbi",
+    bam = ANALYSIS + "/data/{sample}.t2t.haplotagged.bam",
+    bai = ANALYSIS + "/data/{sample}.t2t.haplotagged.bam.bai"
+  message:
+    "Optional T2T Clair3: {wildcards.sample}"
+  conda:
+    "../../../envs/clair3.yaml"
+  params:
+    workdir = ANALYSIS + "/variants/t2t_clair3",
+    outflag = lambda wildcards: f"--output={analysis_dir}/{wildcards.sample}/variants/t2t_clair3/",
+    extra = "--include_all_ctgs --platform='ont' --use_whatshap_for_final_output_haplotagging --remove_intermediate_dir"
+  shell:
+    "mkdir -p {params.workdir} "
+    "&& run_clair3.sh "
+    "--bam_fn={input.bam} "
+    "--ref_fn={input.ref} "
+    "--threads={threads} "
+    "--model_path={config[softwareDir]}/clair3_models/{config[clair3Model]} "
+    "{params.outflag} "
+    "{params.extra} "
+    "&& cp -f {params.workdir}/phased_output.bam {output.bam} "
+    "&& cp -f {params.workdir}/phased_output.bam.bai {output.bai} "
+    "&& cp -f {params.workdir}/phased_merge_output.vcf.gz {output.vcf} "
+    "&& cp -f {params.workdir}/phased_merge_output.vcf.gz.tbi {output.tbi} "
+    f"&& mkdir -p {analysis_dir}/{{wildcards.sample}}/logs/clair3_t2t "
+    f"&& if [ -d {analysis_dir}/{{wildcards.sample}}/variants/t2t_clair3/log ]; then cp -r {analysis_dir}/{{wildcards.sample}}/variants/t2t_clair3/log/. {analysis_dir}/{{wildcards.sample}}/logs/clair3_t2t/; fi "
+    f"&& if [ -f {analysis_dir}/{{wildcards.sample}}/variants/t2t_clair3/run_clair3.log ]; then cp -f {analysis_dir}/{{wildcards.sample}}/variants/t2t_clair3/run_clair3.log {analysis_dir}/{{wildcards.sample}}/logs/clair3_t2t/run_clair3.log; fi "
+    f"; rm -f {analysis_dir}/{{wildcards.sample}}/variants/t2t_clair3/full_alignment.vcf.gz* "
+    f"; rm -f {analysis_dir}/{{wildcards.sample}}/variants/t2t_clair3/pileup.vcf.gz* "
+    f"; rm -f {analysis_dir}/{{wildcards.sample}}/variants/t2t_clair3/merge_output.vcf.gz*"
 
 
 
@@ -217,18 +248,16 @@ rule clair3:
   conda:
     "../../../envs/clair3.yaml"
   params:
-    lambda wildcards: f"--output={analysis_dir}/{wildcards.sample}/variants/",
-    "--include_all_ctgs",
-    "--platform='ont'",
-    "--use_whatshap_for_final_output_haplotagging",
-    "--remove_intermediate_dir"
+    outflag = lambda wildcards: f"--output={analysis_dir}/{wildcards.sample}/variants/",
+    extra = "--include_all_ctgs --platform='ont' --use_whatshap_for_final_output_haplotagging --remove_intermediate_dir"
   shell:
     "run_clair3.sh "
     "--bam_fn={input.bam} "
     "--ref_fn={input.ref} "
     "--threads={threads} " 
     "--model_path={config[softwareDir]}/clair3_models/{config[clair3Model]} "
-    "{params} "
+    "{params.outflag} "
+    "{params.extra} "
   
 
 

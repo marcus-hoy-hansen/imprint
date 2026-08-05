@@ -20,11 +20,11 @@ Updated Jul 27, 2026 /Codex
 
 • Added an optional T2T Snakemake branch, available in both AS and WGS workflows, with rules:
 
-  `t2tRevertBAM`, `t2tAlignBAM`, `t2tSortBAM`, `t2tIndexBAM`
+  `t2tAlignBAM`, `t2tSortBAM`, `t2tIndexBAM`
 
 • Kept the optional T2T branch out of `rule all` so the standard pipeline behavior is unchanged.
 
-• Added config keys `t2tRefFile`, `picardJar`, and `doradoAligner` to support the optional T2T branch.
+• Added config keys `t2tRefFile` and `doradoAligner` to support the optional T2T branch.
 
 • Added profile resources for the optional T2T branch in both `profiles/AS/config.yaml` and `profiles/WGS/config.yaml`.
 

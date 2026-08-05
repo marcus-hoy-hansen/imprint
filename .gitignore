@@ -2,6 +2,9 @@
 logs/
 .watch_state/
 .trash/
+apptainer_test/containers/*.sif
+apptainer_test/output/
+apptainer_test/fullpipe_analysis/
 *.out
 *.err
 .codex

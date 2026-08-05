@@ -16,14 +16,14 @@ default-resources:
 
 # CPU/threads for each rule
 set-threads:
-  BAMlist: 1
-  mergeBAMs: 32
+  prepareRawBAM: 32
+  alignMergedBAM: 32
   sortMergedBAM: 20
   indexMergedBAM: 4
-  t2tRevertBAM: 1
   t2tAlignBAM: 32
   t2tSortBAM: 20
   t2tIndexBAM: 4
+  t2tClair3: 33
   nanoPlot: 15
   qualityValidation: 1
   clair3: 33
@@ -58,12 +58,12 @@ set-threads:
 # NB: runtime is defined in minutes
 # NB: memory is defined in MB
 set-resources:
-  BAMlist:
-    mem_mb: 1024    # 1 GB
-    runtime: 10     # 10 minutes
-
-  mergeBAMs:
+  prepareRawBAM:
     mem_mb: 51200   # 50 GB
+    runtime: 360    # 6 hours
+
+  alignMergedBAM:
+    mem_mb: 32768   # 32 GB
     runtime: 360    # 6 hours
 
   sortMergedBAM:
@@ -72,10 +72,6 @@ set-resources:
 
   indexMergedBAM:
     mem_mb: 5120    # 5 GB
-    runtime: 180    # 3 hours
-
-  t2tRevertBAM:
-    mem_mb: 32768   # 32 GB
     runtime: 180    # 3 hours
 
   t2tAlignBAM:
@@ -89,6 +85,10 @@ set-resources:
   t2tIndexBAM:
     mem_mb: 5120    # 5 GB
     runtime: 60     # 1 hour
+
+  t2tClair3:
+    mem_mb: 81920   # 80 GB
+    runtime: 1440   # 24 hours
   
   nanoPlot:
     mem_mb: 40960   # 40 GB

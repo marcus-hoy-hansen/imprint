@@ -16,8 +16,8 @@ Usage: preflight.sh [BASE] [--entry preflight|basecall|align|snakemake] [--conti
 
 Stages:
   preflight  Run upload checks only. Add --continue to run the full workflow.
-  basecall   Start at Dorado basecalling. Add --continue to align and run Snakemake.
-  align      Submit alignment directly. Add --continue to run Snakemake after alignment.
+  basecall   Start at Dorado basecalling. Add --continue to stage SUP BAM and run Snakemake.
+  align      Legacy alias that stages an existing SUP BAM and optionally runs Snakemake.
   snakemake  Submit runSnakemake.sh directly from preflight-discovered samples.
 EOF
 }
@@ -164,10 +164,9 @@ for exp_dir in "${exp_dirs[@]}"; do
       supsuffix=$([[ "$exp_name" =~ [Ww][Gg][Ss] ]] && echo "sup_WGS" || echo "sup_AS")
       sample_token="${sample_name}_${suffix}"
       basecalled_bam="${dest}/${sample_name}/${sample_name}${supsuffix}.bam"
-      aligned_bam="${dest}/${sample_name}/${sample_name}_${suffix}.bam"
       analysis_sample_dir="${NP_OUT}/${sample_token}"
       analysis_raw_dir="${analysis_sample_dir}/data/raw"
-      analysis_raw_bam="${analysis_raw_dir}/${sample_token}.bam"
+      analysis_raw_bam="${analysis_raw_dir}/${sample_name}${supsuffix}.bam"
       varseq_marker="${analysis_sample_dir}/varseq/${sample_token}_varseq_submitted.txt"
       lock_file="${LOCK_ROOT}/${sample_token}.lock"
       downstream_stage="$ENTRY_STAGE"
@@ -193,9 +192,6 @@ for exp_dir in "${exp_dirs[@]}"; do
           basecall)
             lock_expected="$basecalled_bam"
             ;;
-          align)
-            lock_expected="$aligned_bam"
-            ;;
           *)
             echo "  [$sample_name] Unknown lock stage '$lock_stage'; skipping for manual review"
             continue
@@ -217,31 +213,33 @@ for exp_dir in "${exp_dirs[@]}"; do
             echo "  [$sample_name] Analysis raw BAM exists; submitting Snakemake -> $sample_token"
             clean_sbatch "${NP_SNAKEMAKE_SCRIPT}" "$sample_token"
           else
-            echo "  [$sample_name] Analysis raw BAM exists; alignment skipped"
+            echo "  [$sample_name] Analysis raw BAM exists; Snakemake-ready input already present"
           fi
           continue
         fi
 
-        if [[ -s "$aligned_bam" ]]; then
+        if [[ -s "$basecalled_bam" ]]; then
           mkdir -p "$analysis_raw_dir"
-          cp -u "$aligned_bam" "$analysis_raw_dir/"
+          cp -u "$basecalled_bam" "$analysis_raw_bam"
           if [[ "$CONTINUE_AFTER_ENTRY" -eq 1 ]]; then
-            echo "  [$sample_name] Aligned BAM exists; copied to analysis and submitting Snakemake -> $sample_token"
+            echo "  [$sample_name] SUP BAM exists; copied to analysis and submitting Snakemake -> $sample_token"
             clean_sbatch "${NP_SNAKEMAKE_SCRIPT}" "$sample_token"
           else
-            echo "  [$sample_name] Aligned BAM exists; copied to analysis and alignment skipped"
+            echo "  [$sample_name] SUP BAM exists; copied to analysis"
           fi
           continue
         fi
 
-        echo "  [$sample_name] Submitting alignment directly -> $aligned_bam"
-        submit_stage_with_lock "$lock_file" "$sample_token" "align" \
-          --export=ALL,NP_ENTRY_STAGE="$downstream_stage",NP_SAMPLE_LOCK_FILE="$lock_file",NP_SAMPLE_TOKEN="$sample_token" \
-          "${NP_SCRIPT_ROOT}/dorado_align_and_submit.sh" "$basecalled_bam" "$aligned_bam" "$sample_token"
+        echo "  [$sample_name] Expected SUP BAM missing; cannot continue from align entry"
         continue
       fi
 
       if [[ "$ENTRY_STAGE" == "snakemake" ]]; then
+        if [[ ! -s "$analysis_raw_bam" && -s "$basecalled_bam" ]]; then
+          mkdir -p "$analysis_raw_dir"
+          cp -u "$basecalled_bam" "$analysis_raw_bam"
+          echo "  [$sample_name] Copied SUP BAM into analysis raw -> $analysis_raw_bam"
+        fi
         echo "  [$sample_name] Submitting Snakemake directly -> $sample_token"
         clean_sbatch "${NP_SNAKEMAKE_SCRIPT}" "$sample_token"
         continue
@@ -259,19 +257,11 @@ for exp_dir in "${exp_dirs[@]}"; do
           continue
         fi
 
-        if [[ -s "$aligned_bam" ]]; then
-          mkdir -p "$analysis_raw_dir"
-          cp -u "$aligned_bam" "$analysis_raw_dir/"
-          echo "  [$sample_name] Aligned BAM exists; copied to analysis and submitting Snakemake -> $sample_token"
-          clean_sbatch "${NP_SNAKEMAKE_SCRIPT}" "$sample_token"
-          continue
-        fi
-
         if [[ -s "$basecalled_bam" ]]; then
-          echo "  [$sample_name] Basecalled BAM exists; submitting alignment -> $aligned_bam"
-          submit_stage_with_lock "$lock_file" "$sample_token" "align" \
-            --export=ALL,NP_ENTRY_STAGE=snakemake,NP_SAMPLE_LOCK_FILE="$lock_file",NP_SAMPLE_TOKEN="$sample_token" \
-            "${NP_SCRIPT_ROOT}/dorado_align_and_submit.sh" "$basecalled_bam" "$aligned_bam" "$sample_token"
+          mkdir -p "$analysis_raw_dir"
+          cp -u "$basecalled_bam" "$analysis_raw_bam"
+          echo "  [$sample_name] SUP BAM exists; copied to analysis and submitting Snakemake -> $sample_token"
+          clean_sbatch "${NP_SNAKEMAKE_SCRIPT}" "$sample_token"
           continue
         fi
       elif [[ "$ENTRY_STAGE" == "basecall" && -s "$basecalled_bam" ]]; then
@@ -293,7 +283,7 @@ for exp_dir in "${exp_dirs[@]}"; do
 
       submit_stage_with_lock "$lock_file" "$sample_token" "basecall" \
         --export=ALL,NP_ENTRY_STAGE="$downstream_stage",NP_SAMPLE_LOCK_FILE="$lock_file",NP_SAMPLE_TOKEN="$sample_token" \
-        "${BASECALLER_SBATCH}" "${dest}/${sample_name}" "${sample_name}${supsuffix}.bam" "$aligned_bam"
+        "${BASECALLER_SBATCH}" "${dest}/${sample_name}" "${sample_name}${supsuffix}.bam" "$analysis_raw_bam"
     else
       status=1
     fi

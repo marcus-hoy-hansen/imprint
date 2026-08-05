@@ -63,14 +63,14 @@ module common:
 ##################################################
 #                DATA PREPARATION                #
 ##################################################
-use rule BAMlist from common
-use rule mergeBAMs from common
+use rule prepareRawBAM from common
+use rule alignMergedBAM from common
 use rule sortMergedBAM from common
 use rule indexMergedBAM from common
-use rule t2tRevertBAM from common
 use rule t2tAlignBAM from common
 use rule t2tSortBAM from common
 use rule t2tIndexBAM from common
+use rule t2tClair3 from common
 
 
 

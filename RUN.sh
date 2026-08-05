@@ -18,8 +18,8 @@ Default:
 
 Stages:
   preflight  Run upload checks only. Add --continue to run the full workflow.
-  basecall   Start at Dorado basecalling. Add --continue to align and run Snakemake.
-  align      Submit alignment directly. Add --continue to run Snakemake after alignment.
+  basecall   Start at Dorado basecalling. Add --continue to stage SUP BAM and run Snakemake.
+  align      Legacy alias that stages an existing SUP BAM and optionally runs Snakemake.
   snakemake  Submit runSnakemake.sh directly from preflight-discovered samples.
 
 Watcher:
