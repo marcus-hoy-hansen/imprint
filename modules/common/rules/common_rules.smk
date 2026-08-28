@@ -95,7 +95,7 @@ rule t2tAlignBAM:
     bam = ANALYSIS + "/data/{sample}_unSorted.bam",
     ref = expand("{referenceDir}/{reference}", referenceDir=config["referenceDir"], reference=config["t2tRefFile"])
   output:
-    temp(ANALYSIS + "/data/{sample}.t2t_unsorted.bam")
+    temp(ANALYSIS + "/data/{t2t_sample}.t2t_unsorted.bam")
   message:
     "Optional T2T alignment: {wildcards.sample}"
   params:
@@ -111,9 +111,9 @@ rule t2tAlignBAM:
 
 rule t2tSortBAM:
   input:
-    ANALYSIS + "/data/{sample}.t2t_unsorted.bam"
+    ANALYSIS + "/data/{t2t_sample}.t2t_unsorted.bam"
   output:
-    ANALYSIS + "/data/{sample}.t2t.sorted.bam"
+    ANALYSIS + "/data/{t2t_sample}.t2t.sorted.bam"
   message:
     "Sorting optional T2T BAM: {wildcards.sample}"
   conda:
@@ -127,9 +127,9 @@ rule t2tSortBAM:
 
 rule t2tIndexBAM:
   input:
-    ANALYSIS + "/data/{sample}.t2t.sorted.bam"
+    ANALYSIS + "/data/{t2t_sample}.t2t.sorted.bam"
   output:
-    ANALYSIS + "/data/{sample}.t2t.sorted.bam.bai"
+    ANALYSIS + "/data/{t2t_sample}.t2t.sorted.bam.bai"
   message:
     "Indexing optional T2T BAM: {wildcards.sample}"
   conda:
@@ -142,35 +142,34 @@ rule t2tIndexBAM:
 
 rule t2tClair3:
   input:
-    bam = ANALYSIS + "/data/{sample}.t2t.sorted.bam",
-    bai = ANALYSIS + "/data/{sample}.t2t.sorted.bam.bai",
+    bam = ANALYSIS + "/data/{t2t_sample}.t2t.sorted.bam",
+    bai = ANALYSIS + "/data/{t2t_sample}.t2t.sorted.bam.bai",
     ref = expand("{referenceDir}/{reference}", referenceDir=config["referenceDir"], reference=config["t2tRefFile"])
   output:
-    vcf = ANALYSIS + "/variants/{sample}_t2t_clair3.vcf.gz",
-    tbi = ANALYSIS + "/variants/{sample}_t2t_clair3.vcf.gz.tbi",
-    bam = ANALYSIS + "/data/{sample}.t2t.haplotagged.bam",
-    bai = ANALYSIS + "/data/{sample}.t2t.haplotagged.bam.bai"
+    vcf = ANALYSIS + "/variants/{t2t_sample}_t2t_clair3.vcf.gz",
+    tbi = ANALYSIS + "/variants/{t2t_sample}_t2t_clair3.vcf.gz.tbi",
+    bam = ANALYSIS + "/data/{t2t_sample}.t2t.haplotagged.bam",
+    bai = ANALYSIS + "/data/{t2t_sample}.t2t.haplotagged.bam.bai"
   message:
     "Optional T2T Clair3: {wildcards.sample}"
-  conda:
-    "../../../envs/clair3.yaml"
   params:
+    sif = config["clair3Sif"],
     workdir = ANALYSIS + "/variants/t2t_clair3",
     outflag = lambda wildcards: f"--output={analysis_dir}/{wildcards.sample}/variants/t2t_clair3/",
     extra = "--include_all_ctgs --platform='ont' --use_whatshap_for_final_output_haplotagging --remove_intermediate_dir"
   shell:
     "mkdir -p {params.workdir} "
-    "&& run_clair3.sh "
+    "&& apptainer exec --bind /faststorage --bind /home {params.sif} /opt/bin/run_clair3.sh "
     "--bam_fn={input.bam} "
     "--ref_fn={input.ref} "
     "--threads={threads} "
     "--model_path={config[softwareDir]}/clair3_models/{config[clair3Model]} "
     "{params.outflag} "
     "{params.extra} "
-    "&& cp -f {params.workdir}/phased_output.bam {output.bam} "
-    "&& cp -f {params.workdir}/phased_output.bam.bai {output.bai} "
-    "&& cp -f {params.workdir}/phased_merge_output.vcf.gz {output.vcf} "
-    "&& cp -f {params.workdir}/phased_merge_output.vcf.gz.tbi {output.tbi} "
+    "&& mv -f {params.workdir}/phased_output.bam {output.bam} "
+    "&& mv -f {params.workdir}/phased_output.bam.bai {output.bai} "
+    "&& mv -f {params.workdir}/phased_merge_output.vcf.gz {output.vcf} "
+    "&& mv -f {params.workdir}/phased_merge_output.vcf.gz.tbi {output.tbi} "
     f"&& mkdir -p {analysis_dir}/{{wildcards.sample}}/logs/clair3_t2t "
     f"&& if [ -d {analysis_dir}/{{wildcards.sample}}/variants/t2t_clair3/log ]; then cp -r {analysis_dir}/{{wildcards.sample}}/variants/t2t_clair3/log/. {analysis_dir}/{{wildcards.sample}}/logs/clair3_t2t/; fi "
     f"&& if [ -f {analysis_dir}/{{wildcards.sample}}/variants/t2t_clair3/run_clair3.log ]; then cp -f {analysis_dir}/{{wildcards.sample}}/variants/t2t_clair3/run_clair3.log {analysis_dir}/{{wildcards.sample}}/logs/clair3_t2t/run_clair3.log; fi "
@@ -189,7 +188,6 @@ rule nanoPlot:
     bam = ANALYSIS + "/data/{sample}.bam",
     bai = ANALYSIS + "/data/{sample}.bam.bai"
   output:
-    outDir = directory(ANALYSIS + "/QC"),
     html = ANALYSIS + "/QC/{sample}_NanoPlot-report.html"
   message:  
     "NanoPlot: {wildcards.sample}"
@@ -202,9 +200,10 @@ rule nanoPlot:
     "--plots dot",
     "-f png"
   shell:
+    "mkdir -p $(dirname {output.html}) && "
     "NanoPlot "
     "--bam {input.bam} "
-    "--outdir {output.outDir} "
+    "--outdir $(dirname {output.html}) "
     "--threads {threads} "
     "{params}"
 
@@ -239,53 +238,36 @@ rule clair3:
     bai = ANALYSIS + "/data/{sample}.bam.bai",
     ref = expand("{referenceDir}/{reference}", referenceDir=config["referenceDir"], reference=config["refFile"])
   output:
-    vcf = ANALYSIS + "/variants/phased_merge_output.vcf.gz",
-    tbi = ANALYSIS + "/variants/phased_merge_output.vcf.gz.tbi",
-    bam = ANALYSIS + "/variants/phased_output.bam",
-    bai = ANALYSIS + "/variants/phased_output.bam.bai"
+    vcf = ANALYSIS + "/variants/{sample}_clair3.vcf.gz",
+    tbi = ANALYSIS + "/variants/{sample}_clair3.vcf.gz.tbi",
+    bam = ANALYSIS + "/data/{sample}.haplotagged.bam",
+    bai = ANALYSIS + "/data/{sample}.haplotagged.bam.bai"
   message:
     "Clair3: {wildcards.sample}"
-  conda:
-    "../../../envs/clair3.yaml"
   params:
-    outflag = lambda wildcards: f"--output={analysis_dir}/{wildcards.sample}/variants/",
+    sif = config["clair3Sif"],
+    workdir = ANALYSIS + "/variants/clair3",
+    outflag = lambda wildcards: f"--output={analysis_dir}/{wildcards.sample}/variants/clair3/",
     extra = "--include_all_ctgs --platform='ont' --use_whatshap_for_final_output_haplotagging --remove_intermediate_dir"
   shell:
-    "run_clair3.sh "
+    "mkdir -p {params.workdir} "
+    "&& apptainer exec --bind /faststorage --bind /home {params.sif} /opt/bin/run_clair3.sh "
     "--bam_fn={input.bam} "
     "--ref_fn={input.ref} "
     "--threads={threads} " 
     "--model_path={config[softwareDir]}/clair3_models/{config[clair3Model]} "
     "{params.outflag} "
     "{params.extra} "
-  
-
-
-# Rename, move and delete files
-rule clair3CleanUp:
-  input:
-    bam = ANALYSIS + "/variants/phased_output.bam",
-    bai = ANALYSIS + "/variants/phased_output.bam.bai",
-    vcf = ANALYSIS + "/variants/phased_merge_output.vcf.gz",
-    tbi = ANALYSIS + "/variants/phased_merge_output.vcf.gz.tbi"
-  output:
-    bam = ANALYSIS + "/data/{sample}.haplotagged.bam",
-    bai = ANALYSIS + "/data/{sample}.haplotagged.bam.bai",
-    vcf = ANALYSIS + "/variants/{sample}_clair3.vcf.gz",
-    tbi = ANALYSIS + "/variants/{sample}_clair3.vcf.gz.tbi"
-  message:
-    "Cleaning up files after variant calling"
-  shell:
-    "cp -f {input.bam} {output.bam} "
-    "&& cp -f {input.bai} {output.bai} "
-    "&& cp -f {input.vcf} {output.vcf} "
-    "&& cp -f {input.tbi} {output.tbi} "
+    "&& mv -f {params.workdir}/phased_output.bam {output.bam} "
+    "&& mv -f {params.workdir}/phased_output.bam.bai {output.bai} "
+    "&& mv -f {params.workdir}/phased_merge_output.vcf.gz {output.vcf} "
+    "&& mv -f {params.workdir}/phased_merge_output.vcf.gz.tbi {output.tbi} "
     f"&& mkdir -p {analysis_dir}/{{wildcards.sample}}/logs/clair3 "
-    f"&& if [ -d {analysis_dir}/{{wildcards.sample}}/variants/log ]; then cp -r {analysis_dir}/{{wildcards.sample}}/variants/log/. {analysis_dir}/{{wildcards.sample}}/logs/clair3/; fi "
-    f"&& if [ -f {analysis_dir}/{{wildcards.sample}}/variants/run_clair3.log ]; then cp -f {analysis_dir}/{{wildcards.sample}}/variants/run_clair3.log {analysis_dir}/{{wildcards.sample}}/logs/clair3/run_clair3.log; fi "
-    f"; rm {analysis_dir}/{{wildcards.sample}}/variants/full_alignment.vcf.gz* "
-    f"; rm {analysis_dir}/{{wildcards.sample}}/variants/pileup.vcf.gz* "
-    f"; rm {analysis_dir}/{{wildcards.sample}}/variants/merge_output.vcf.gz*"
+    f"&& if [ -d {analysis_dir}/{{wildcards.sample}}/variants/clair3/log ]; then cp -r {analysis_dir}/{{wildcards.sample}}/variants/clair3/log/. {analysis_dir}/{{wildcards.sample}}/logs/clair3/; fi "
+    f"&& if [ -f {analysis_dir}/{{wildcards.sample}}/variants/clair3/run_clair3.log ]; then cp -f {analysis_dir}/{{wildcards.sample}}/variants/clair3/run_clair3.log {analysis_dir}/{{wildcards.sample}}/logs/clair3/run_clair3.log; fi "
+    f"; rm -f {analysis_dir}/{{wildcards.sample}}/variants/clair3/full_alignment.vcf.gz* "
+    f"; rm -f {analysis_dir}/{{wildcards.sample}}/variants/clair3/pileup.vcf.gz* "
+    f"; rm -f {analysis_dir}/{{wildcards.sample}}/variants/clair3/merge_output.vcf.gz*"
 
 
 rule chromVariantAlleleFrequenciesPanel:
@@ -859,10 +841,11 @@ rule varseqProject:
     remoteScript = config["varseqRemoteScript"],
     template = config["varseqTemplate"],
     vcfRemote = expand("{base}/{sample}/renamed_vcfs/variants_{sample}_clair3.vcf.gz", base=config["analysisDir"], sample="{sample}"),
-    projectDir = expand("{base}/{sample}/varseq", base=config["analysisDir"], sample="{sample}")
+    projectDir = config["varseqProjectRoot"],
+    projectSample = lambda wildcards: f"{wildcards.sample.split('_hg38_')[0]}_{config['varseqProjectLabel']}"
   shell:
     "scripts/run_varseq_remote.sh "
-    "{wildcards.sample} "
+    "{params.projectSample} "
     "{params.vcfRemote} "
     "{params.template} "
     "{params.projectDir} "

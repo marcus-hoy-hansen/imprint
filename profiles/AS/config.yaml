@@ -27,7 +27,6 @@ set-threads:
   nanoPlot: 15
   qualityValidation: 1
   clair3: 33
-  clair3CleanUp: 1
   updateTags: 1
   indexUpdatedImprintBAM: 4
   modkitPileupFull: 24
@@ -101,10 +100,6 @@ set-resources:
   clair3:
     mem_mb: 81920   # 80 GB
     runtime: 1440   # 24 hours
-
-  clair3CleanUp: 
-    mem_mb: 5120    # 5 GB
-    runtime: 30     # 30 minutes
 
   renameClair3BAM:
     mem_mb: 1024    # 1 GB
@@ -192,7 +187,7 @@ set-resources:
 
   chromVariantAlleleFrequenciesPanel:
     mem_mb: 4096    # 4 GB
-    runtime: 30     # 30 minutes
+    runtime: 120    # 2 hours
 
   straglr:
     mem_mb: 49152   # 48 GB

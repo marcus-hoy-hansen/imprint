@@ -12,7 +12,7 @@ CONTINUE_AFTER_ENTRY=0
 
 usage() {
   cat >&2 <<'EOF'
-Usage: preflight.sh [BASE] [--entry preflight|basecall|align|snakemake] [--continue]
+Usage: preflight.sh [BASE] [--entry preflight|basecall|align|snakemake] [--analysis-dir /path] [--continue]
 
 Stages:
   preflight  Run upload checks only. Add --continue to run the full workflow.
@@ -29,6 +29,12 @@ while (( $# )); do
       shift
       [[ $# -gt 0 ]] || { echo "ERROR: --entry requires a value" >&2; usage; exit 1; }
       ENTRY_STAGE="$1"
+      ;;
+    --analysis-dir)
+      shift
+      [[ $# -gt 0 ]] || { echo "ERROR: --analysis-dir requires a value" >&2; usage; exit 1; }
+      NP_OUT="$1"
+      NP_ANALYSIS_DIR="$1"
       ;;
     --continue)
       CONTINUE_AFTER_ENTRY=1
@@ -62,6 +68,13 @@ BASE=${ARGS[0]:-$NP_BASE}
 STORAGE_BASE="$NP_STORAGE_BASE"
 BASECALLER_SBATCH="${NP_BASECALLER_SBATCH:-${NP_SCRIPT_ROOT}/dorado_basecaller.sh}"
 LOCK_ROOT="${NP_WATCH_STATE_DIR}/sample_locks"
+
+# Ensure downstream sbatch jobs inherit any runtime overrides such as
+# --analysis-dir instead of falling back to config defaults.
+export NP_OUT
+export NP_ANALYSIS_DIR
+export NP_BASE
+export NP_STORAGE_BASE
 
 # If user requests CPU/test mode but left default GPU sbatch, switch to CPU header.
 if [[ "${NP_DORADO_DEVICE:-}" == "cpu" || "${NP_DORADO_TEST_MODE:-0}" == "1" ]]; then
@@ -273,9 +286,9 @@ for exp_dir in "${exp_dirs[@]}"; do
       if [[ -e "$dest/$sample_name" ]]; then
         echo "  [$sample_name] Storage target already exists; reusing $dest/$sample_name/"
       else
-        echo "  [$sample_name] Copying to $dest/$sample_name/"
+        echo "  [$sample_name] Moving to $dest/$sample_name/"
         sleep 10
-        cp -r "$sample_dir" "$dest/"
+        mv "$sample_dir" "$dest/"
       fi
 
       sleep 10

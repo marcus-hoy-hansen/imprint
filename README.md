@@ -1,6 +1,6 @@
 # Imprinting Nanopore Workflow
 
-Current version: `0.2.0`
+Current version: `1.1.0`
 
 Snakemake workflow and preflight helpers for uploaded Nanopore runs. The current wrapper is `RUN.sh`, which submits the preflight pipeline with the repository-local configuration.
 

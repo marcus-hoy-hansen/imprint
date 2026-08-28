@@ -1,0 +1,31 @@
+executor: slurm
+jobs: 10
+latency-wait: 120
+keep-going: True
+keep-incomplete: True
+rerun-incomplete: True
+rerun-triggers: mtime
+
+default-resources:
+  slurm_account: nanopore_kga
+  slurm_partition: normal
+
+set-threads:
+  validateSample: 1
+  copySampleToStorage: 1
+  basecallSupBam: 4
+
+set-resources:
+  validateSample:
+    mem_mb: 1024
+    runtime: 30
+
+  copySampleToStorage:
+    mem_mb: 4096
+    runtime: 360
+
+  basecallSupBam:
+    mem_mb: 24576
+    runtime: 1440
+    slurm_partition: gpu-l40s
+    slurm_extra: "'--gpus=1'"

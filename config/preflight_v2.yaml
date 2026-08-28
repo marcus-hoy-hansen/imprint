@@ -1,0 +1,21 @@
+uploadDir: /faststorage/project/nanopore_kga/uploaded
+storageDir: /faststorage/project/nanopore_kga/STORAGE
+analysisDir: /faststorage/project/nanopore_kga/analysis_v2
+
+referenceDir: /faststorage/project/nanopore_kga/STORAGE/resources/references
+referenceFile: hg38_noAlt.fasta
+softwareDir: /faststorage/project/nanopore_kga/STORAGE/resources/software
+
+doradoBasecaller: /faststorage/project/nanopore_kga/STORAGE/resources/software/dorado-2.1.1-linux-x64/bin/dorado
+doradoModel: sup,5mCG_5hmCG,6mA
+doradoTestModel: fast
+doradoDevice: cuda:all
+doradoBatchSize: 256
+doradoTestMode: 0
+doradoTestLimit: 1000
+
+runSnakemakeScript: /faststorage/project/nanopore_kga/workflow_dev/scripts/runSnakemake.sh
+preflightStateDir: ""
+
+adaptiveSampleSuffix: hg38_ASv2
+wgsSampleSuffix: hg38_WGS

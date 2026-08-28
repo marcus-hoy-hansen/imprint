@@ -1,13 +1,13 @@
 #!/bin/bash
 #SBATCH --job-name=dorado-sup
 #SBATCH --account=nanopore_kga
-#SBATCH --partition=gpu
-#SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=24G
+#SBATCH --partition=gpu,gpu-h200
+#SBATCH --gpus=1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=32G
 #SBATCH --time=24:00:00
-#SBATCH --output=%x-%j.out
-#SBATCH --error=%x-%j.err
+#SBATCH --output=logs/%x-%j.out
+#SBATCH --error=logs/%x-%j.err
 
 # Usage:
 #   sbatch dorado_basecaller.sh <RUN_SAMPLE_ROOT> [OUT_BAM] [ANALYSIS_RAW_BAM]
@@ -56,6 +56,7 @@ echo "ROOT        : $ROOT"
 echo "Output BAM  : $ROOT/$OUT_BAM"
 echo "Model       : $MODEL"
 echo "Min QScore  : 10"
+echo "Batch size  : $NP_DORADO_BATCHSIZE"
 echo "Device      : $DEVICE"
 echo "Entry Stage : $ENTRY_STAGE"
 "$DORADO" --version || true
@@ -73,6 +74,7 @@ if [[ -s "$OUT_PATH" ]]; then
   "$DORADO" basecaller \
     -x "$DEVICE" \
     --min-qscore 10 \
+    --batchsize "$NP_DORADO_BATCHSIZE" \
     --resume-from "$OUT_PATH" \
     "${LIMIT_ARGS[@]}" \
     "$MODEL" \
@@ -83,6 +85,7 @@ else
   "$DORADO" basecaller \
     -x "$DEVICE" \
     --min-qscore 10 \
+    --batchsize "$NP_DORADO_BATCHSIZE" \
     "${LIMIT_ARGS[@]}" \
     "$MODEL" \
     "$ROOT"/*/pod5/ \
@@ -104,5 +107,5 @@ if [[ "$ENTRY_STAGE" == "basecall" ]]; then
 fi
 
 if [[ "$ENTRY_STAGE" == "snakemake" ]]; then
-  clean_sbatch --export=ALL,CONFIG_FILE="${CONFIG_FILE:-}",NP_CONFIG_FILE="${NP_CONFIG_FILE:-}",NP_ANALYSIS_DIR="${NP_OUT}" "${NP_SNAKEMAKE_SCRIPT}" "${SAMPLE_TOKEN}"
+  clean_sbatch --export=CONFIG_FILE="${CONFIG_FILE:-}",NP_CONFIG_FILE="${NP_CONFIG_FILE:-}",NP_ANALYSIS_DIR="${NP_OUT}" "${NP_SNAKEMAKE_SCRIPT}" "${SAMPLE_TOKEN}"
 fi

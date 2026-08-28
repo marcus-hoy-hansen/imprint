@@ -52,7 +52,7 @@ if [[ "$ENTRY_STAGE" == "align" ]]; then
     exit 0
 fi
 
-clean_sbatch --export=ALL,CONFIG_FILE="${CONFIG_FILE:-}",NP_CONFIG_FILE="${NP_CONFIG_FILE:-}",NP_ANALYSIS_DIR="${NP_OUT}" "${NP_SNAKEMAKE_SCRIPT}" "${SAMPLE}"
+clean_sbatch --export=CONFIG_FILE="${CONFIG_FILE:-}",NP_CONFIG_FILE="${NP_CONFIG_FILE:-}",NP_ANALYSIS_DIR="${NP_OUT}" "${NP_SNAKEMAKE_SCRIPT}" "${SAMPLE}"
 
 #rmdir -p tmp
 #rm -rf ${UNMAPPED_BAM_DIR}

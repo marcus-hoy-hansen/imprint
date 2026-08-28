@@ -50,6 +50,7 @@ fi
 if [[ -z "$OUTPUT_BAM" ]]; then
   input_dir="$(dirname "$INPUT_BAM")"
   input_base="$(basename "$INPUT_BAM" .bam)"
+  input_base="${input_base/_hg38_/_}"
   OUTPUT_BAM="${input_dir}/${input_base}.t2t.sorted.bam"
 fi
 

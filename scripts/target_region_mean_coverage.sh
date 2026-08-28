@@ -145,6 +145,8 @@ awk '
   }
 ' "$sorted_tmp" > "$best_summary"
 
+mkdir -p "$(dirname "$OUTPUT_FILE")"
+
 {
   printf 'Panel\t%s\n' "$(basename "$best_bed")"
   cat "$best_summary"

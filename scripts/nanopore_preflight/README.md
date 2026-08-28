@@ -104,12 +104,13 @@ The preflight chain expects these external resources to be available outside Git
 
 - The current preflight checks require run directories and `output_hash_*.csv` files.
 - Preflight no longer checks for BAM files and supports POD5-only input.
-- Samples are currently copied from `uploaded` to `STORAGE` with `cp -r`.
+- Samples are moved from `uploaded` to `STORAGE` with `mv` when the storage target does not already exist.
 - `--entry align` assumes the expected basecalled BAM already exists in `STORAGE/<experiment>/<sample>/`.
-- `--entry align --continue` copies that SUP BAM into `analysis_v2/<sample>/data/raw/` and then submits Snakemake.
-- `--entry snakemake` will also stage the SUP BAM into `analysis_v2/<sample>/data/raw/` when it is present in storage but not yet copied.
+- `--entry align --continue` copies that SUP BAM into `<analysis-dir>/<sample>/data/raw/` and then submits Snakemake.
+- `--entry snakemake` will also stage the SUP BAM into `<analysis-dir>/<sample>/data/raw/` when it is present in storage but not yet copied.
 - `--entry preflight --continue` skips samples that already have the final VarSeq marker.
 - Use `--entry snakemake` when you need to resubmit Snakemake for already-finished samples.
 - Default analysis output root is `${NP_PROJECT_ROOT}/analysis_v2`.
+- Override the analysis output root with `--analysis-dir /path` or `NP_ANALYSIS_DIR=/path`.
 - Default reference is `${NP_PROJECT_ROOT}/STORAGE/resources/references/hg38_noAlt.fasta`.
 - Default Snakemake launcher is `${NP_PROJECT_ROOT}/workflow_dev/scripts/runSnakemake.sh`.

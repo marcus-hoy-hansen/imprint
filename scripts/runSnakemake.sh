@@ -10,22 +10,48 @@
 
 # Read input arguments
 if [ $# -eq 0 ]; then
-    >&2 echo "Usage: bash runSnakemake.sh <sampleID>"
+    >&2 echo "Usage: bash runSnakemake.sh <sampleID> [--analysis-dir /path] [snakemake args/targets...]"
     >&2 echo "SampleID consists of Langtved ID, the reference (T2T/hg38) and type of sequencing(AS/WGS)"
     >&2 echo "Reference is name of reference. Must be either hg38 or T2T"
     >&2 echo "If the sample is adaptive you need to provide the version of the adaptive sampling bed file used during sequencing (eg. ASv1)"
     >&2 echo "Example of running whole genome sample: bash runSnakemake.sh sample_hg38_WGS"
     >&2 echo "Example of running adaptive sample: bash runSnakemake.sh sample_hg38_ASv1"
+    >&2 echo "Example with alternative output root: bash runSnakemake.sh sample_hg38_ASv2 --analysis-dir /faststorage/project/nanopore_kga/analysis_test"
     >&2 echo "Exiting"
     exit 1
 fi
 
-# Input arguments
-SAMPLE=$1
-shift
-EXTRA_ARGS=("$@")
 CONFIG_FILE="${NP_CONFIG_FILE:-config/config.yaml}"
 ANALYSIS_DIR="${NP_ANALYSIS_DIR:-}"
+SAMPLE=""
+EXTRA_ARGS=()
+
+while (( $# )); do
+    case "$1" in
+        --analysis-dir)
+            shift
+            [[ $# -gt 0 ]] || { echo "ERROR: --analysis-dir requires a value" >&2; exit 1; }
+            ANALYSIS_DIR="$1"
+            ;;
+        -h|--help)
+            >&2 echo "Usage: bash runSnakemake.sh <sampleID> [--analysis-dir /path] [snakemake args/targets...]"
+            exit 0
+            ;;
+        *)
+            if [[ -z "$SAMPLE" ]]; then
+                SAMPLE="$1"
+            else
+                EXTRA_ARGS+=("$1")
+            fi
+            ;;
+    esac
+    shift
+done
+
+if [[ -z "$SAMPLE" ]]; then
+    echo "ERROR: sampleID is required" >&2
+    exit 1
+fi
 
 
 # Split input to get sampleID, reference and type (AS or WGS)

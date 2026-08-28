@@ -36,6 +36,11 @@ clean_sbatch() {
     -u SLURM_MEM_PER_CPU \
     -u SLURM_MEM_PER_GPU \
     -u SLURM_MEM_PER_NODE \
+    -u SLURM_GPUS \
+    -u SLURM_JOB_GPUS \
+    -u SLURM_STEP_GPUS \
+    -u SLURM_GPUS_ON_NODE \
+    -u CUDA_VISIBLE_DEVICES \
     sbatch "$@"
 }
 

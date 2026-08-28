@@ -5,6 +5,8 @@ analysis_dir = config["analysisDir"]
 ANALYSIS = analysis_dir + "/{sample}"
 WILDCARD_ANALYSIS = analysis_dir + "/{wildcards.sample}"
 QDNA_BIN_SIZES = [str(size) for size in config["qDNAseqBinSizes"]]
+SAMPLES = config["sample"] if isinstance(config["sample"], list) else [config["sample"]]
+T2T_SAMPLES = [sample.replace("_hg38_", "_") for sample in SAMPLES]
 
 localrules: varseqProject
 
@@ -81,6 +83,23 @@ use rule t2tSortBAM from common
 use rule t2tIndexBAM from common
 use rule t2tClair3 from common
 
+rule t2t:
+    input:
+        expand(ANALYSIS + "/data/{t2t_sample}.t2t.haplotagged.bam", zip, sample=SAMPLES, t2t_sample=T2T_SAMPLES),
+        expand(ANALYSIS + "/data/{t2t_sample}.t2t.haplotagged.bam.bai", zip, sample=SAMPLES, t2t_sample=T2T_SAMPLES),
+        expand(ANALYSIS + "/variants/{t2t_sample}_t2t_clair3.vcf.gz", zip, sample=SAMPLES, t2t_sample=T2T_SAMPLES),
+        expand(ANALYSIS + "/variants/{t2t_sample}_t2t_clair3.vcf.gz.tbi", zip, sample=SAMPLES, t2t_sample=T2T_SAMPLES)
+
+rule t2t_bam:
+    input:
+        expand(ANALYSIS + "/data/{t2t_sample}.t2t.haplotagged.bam", zip, sample=SAMPLES, t2t_sample=T2T_SAMPLES),
+        expand(ANALYSIS + "/data/{t2t_sample}.t2t.haplotagged.bam.bai", zip, sample=SAMPLES, t2t_sample=T2T_SAMPLES)
+
+rule t2t_vcf:
+    input:
+        expand(ANALYSIS + "/variants/{t2t_sample}_t2t_clair3.vcf.gz", zip, sample=SAMPLES, t2t_sample=T2T_SAMPLES),
+        expand(ANALYSIS + "/variants/{t2t_sample}_t2t_clair3.vcf.gz.tbi", zip, sample=SAMPLES, t2t_sample=T2T_SAMPLES)
+
 
 
 ##################################################
@@ -95,7 +114,6 @@ use rule qualityValidation from common
 #                VARIANT CALLING                 #
 ##################################################
 use rule clair3 from common
-use rule clair3CleanUp from common
 use rule chromVariantAlleleFrequenciesPanel from common
 
 

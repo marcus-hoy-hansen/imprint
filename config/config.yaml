@@ -16,14 +16,17 @@ minimumCoverage: 5
 ##########
 # CLAIR3 #
 ##########
-dataDir: ../STORAGE/resources/data
-referenceDir: ../STORAGE/resources/references
-softwareDir: ../STORAGE/resources/software
+dataDir: /faststorage/project/nanopore_kga/STORAGE/resources/data
+referenceDir: /faststorage/project/nanopore_kga/STORAGE/resources/references
+softwareDir: /faststorage/project/nanopore_kga/STORAGE/resources/software
 t2tRefFile: GCF_009914755.1_T2T-CHM13v2.0_genomic.fna
-doradoAligner: /faststorage/project/nanopore_kga/tools/dorado-2.1.1-linux-x64/bin/dorado
+doradoAligner: /faststorage/project/nanopore_kga/STORAGE/resources/software/dorado-2.1.1-linux-x64/bin/dorado
+clair3Sif: /faststorage/project/nanopore_kga/STORAGE/resources/software/clair3-v2.0.2.sif
 varseqHost: varseq-02
 varseqRemoteScript: /faststorage/project/nanopore_kga/workflow_dev/scripts/varseq_remote_runner.sh
-varseqTemplate: /faststorage/project/nanopore_kga/workflow/varseqtemplates/Imprinting_ONT-LR-seq_HG38_v2.vsproject-template
+varseqTemplate: /faststorage/project/nanopore_kga/workflow/varseqtemplates/In-House-ONT_LDnr_HG38_v3.1.vsproject-template
+varseqProjectRoot: /faststorage/project/nanopore_kga/analysis_v2/TEST_Varseq_projects_2026
+varseqProjectLabel: In-House-ONT_HG38_v3.1
 analysisDir: /faststorage/project/nanopore_kga/analysis_v2
 varseqSubmitHost: fe-open-01
 

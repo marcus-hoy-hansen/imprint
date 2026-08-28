@@ -6,11 +6,12 @@ ROOT="$(cd "${ROOT}" && pwd)"
 CONFIG_FILE="${ROOT}/scripts/nanopore_preflight/config.sh"
 PREFLIGHT="${ROOT}/scripts/nanopore_preflight/preflight.sh"
 SCHEDULER="${ROOT}/scripts/nanopore_preflight/nanopore_imprint_scheduler.sh"
+LOG_DIR="${ROOT}/logs"
 
 usage() {
   cat <<EOF
-Usage: bash RUN.sh [BASE] [--entry preflight|basecall|align|snakemake] [--continue]
-       bash RUN.sh --watch [BASE] [--entry preflight|basecall|align|snakemake] [--continue]
+Usage: bash RUN.sh [BASE] [--entry preflight|basecall|align|snakemake] [--analysis-dir /path] [--continue]
+       bash RUN.sh --watch [BASE] [--entry preflight|basecall|align|snakemake] [--analysis-dir /path] [--continue]
 
 Default:
   bash RUN.sh
@@ -32,9 +33,12 @@ Examples:
   bash RUN.sh --entry preflight --continue
   bash RUN.sh --entry snakemake
   bash RUN.sh --entry align --continue
+  bash RUN.sh --analysis-dir /faststorage/project/nanopore_kga/analysis_test --continue
   bash RUN.sh /faststorage/project/nanopore_kga/uploaded --entry snakemake
 EOF
 }
+
+mkdir -p "${LOG_DIR}"
 
 case "${1:-}" in
   -h|--help)
@@ -47,17 +51,29 @@ case "${1:-}" in
       -u SLURM_MEM_PER_CPU \
       -u SLURM_MEM_PER_GPU \
       -u SLURM_MEM_PER_NODE \
-      sbatch --export=ALL,CONFIG_FILE="${CONFIG_FILE}" "${SCHEDULER}" --watch "$@"
+      sbatch --output="${LOG_DIR}/imprint-watch-%j.out" --error="${LOG_DIR}/imprint-watch-%j.out" --export=ALL,CONFIG_FILE="${CONFIG_FILE}" "${SCHEDULER}" --watch "$@"
     exit 0
     ;;
 esac
 
+has_explicit_mode=0
+for arg in "$@"; do
+  case "$arg" in
+    --entry|--continue)
+      has_explicit_mode=1
+      break
+      ;;
+  esac
+done
+
 if [[ $# -eq 0 ]]; then
   set -- --entry preflight --continue
+elif [[ $has_explicit_mode -eq 0 ]]; then
+  set -- --entry preflight --continue "$@"
 fi
 
 env \
   -u SLURM_MEM_PER_CPU \
   -u SLURM_MEM_PER_GPU \
   -u SLURM_MEM_PER_NODE \
-  sbatch --export=ALL,CONFIG_FILE="${CONFIG_FILE}" "${PREFLIGHT}" "$@"
+  sbatch --output="${LOG_DIR}/preflight-%j.out" --error="${LOG_DIR}/preflight-%j.out" --export=ALL,CONFIG_FILE="${CONFIG_FILE}" "${PREFLIGHT}" "$@"

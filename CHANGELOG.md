@@ -6,6 +6,30 @@
 
 ---
 
+Updated Aug 28, 2026 /Codex
+
+• Released workflow version `1.1.0`.
+
+• Added a Snakemake-native preflight v2 entry point with `RUN_v2.sh`, `config/preflight_v2.yaml`, `profiles/preflight/config.yaml`, and `workflows/preflight/Snakefile_preflight`. By default it stages into `analysis_v2/` unless `--analysis-dir` is supplied.
+
+• Routed wrapper and preflight Slurm logs into `logs/`.
+
+• Kept `--analysis-dir` available on the front wrappers and propagated it to downstream Snakemake submissions.
+
+• Added nested Slurm submission cleanup for inherited memory and GPU environment variables.
+
+• Updated optional T2T output naming so mapped BAMs and T2T variant files drop `_hg38_` from the output filename.
+
+• Removed NanoPlot ownership of the whole `QC/` directory. NanoPlot now owns only its HTML report, preventing parallel QC outputs such as `QC/validation_metrics/` from being removed during reruns.
+
+• Updated Clair3 execution to use the configured Apptainer image and write final Clair3 outputs directly.
+
+• Added VarSeq TEST autostart routing through `varseqProjectRoot` and `varseqProjectLabel`, currently targeting `TEST_Varseq_projects_2026` with the `In-House-ONT_LDnr_HG38_v3.1` project label.
+
+• Replaced the accidental tracked `scripts/unlock.sh` terminal transcript with a minimal Snakemake unlock wrapper.
+
+---
+
 Updated Aug 5, 2026 /Codex
 
 • Released workflow version `1.0.0`.

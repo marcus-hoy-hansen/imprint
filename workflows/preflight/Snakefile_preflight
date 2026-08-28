@@ -1,0 +1,234 @@
+from pathlib import Path
+import os
+import re
+import subprocess
+
+configfile: "../../config/preflight_v2.yaml"
+
+UPLOAD_DIR = Path(config["uploadDir"])
+STORAGE_DIR = Path(config["storageDir"])
+ANALYSIS_DIR = Path(config["analysisDir"])
+STATE_ROOT = Path(config.get("preflightStateDir") or str(ANALYSIS_DIR / "_preflight_v2"))
+RUN_SNAKEMAKE_SCRIPT = config["runSnakemakeScript"]
+PREFLIGHT_LOG_DIR = Path(RUN_SNAKEMAKE_SCRIPT).resolve().parents[1] / "logs"
+PREFLIGHT_LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def discover_samples():
+    samples_by_token = {}
+
+    search_roots = [UPLOAD_DIR, STORAGE_DIR]
+    for search_root in search_roots:
+        if not search_root.is_dir():
+            continue
+
+        experiment_dirs = sorted(
+            d for d in search_root.iterdir()
+            if d.is_dir() and re.search(r"(adaptive|adaptiv|wgs)$", d.name, re.IGNORECASE)
+        )
+
+        for experiment_dir in experiment_dirs:
+            is_wgs = bool(re.search(r"wgs$", experiment_dir.name, re.IGNORECASE))
+            sample_suffix = config["wgsSampleSuffix"] if is_wgs else config["adaptiveSampleSuffix"]
+
+            for sample_dir in sorted(d for d in experiment_dir.iterdir() if d.is_dir()):
+                run_dirs = sorted(d for d in sample_dir.iterdir() if d.is_dir())
+                sample_name = sample_dir.name
+                sample_token = f"{sample_name}_{sample_suffix}"
+                storage_sample_dir = STORAGE_DIR / experiment_dir.name / sample_name
+                analysis_sample_dir = ANALYSIS_DIR / sample_token
+                analysis_raw_bam = analysis_sample_dir / "data" / "raw" / f"{sample_token}.bam"
+                varseq_marker = analysis_sample_dir / "varseq" / f"{sample_token}_varseq_submitted.txt"
+
+                if search_root == STORAGE_DIR and not (STATE_ROOT / sample_token).exists():
+                    continue
+
+                samples_by_token.setdefault(
+                    sample_token,
+                    {
+                        "experiment": experiment_dir.name,
+                        "sample_name": sample_name,
+                        "sample_token": sample_token,
+                        "sample_dir": sample_dir,
+                        "run_dirs": run_dirs,
+                        "storage_sample_dir": storage_sample_dir,
+                        "analysis_raw_bam": analysis_raw_bam,
+                        "varseq_marker": varseq_marker,
+                    },
+                )
+
+    return list(samples_by_token.values())
+
+
+SAMPLES = discover_samples()
+SAMPLE_TOKENS = [sample["sample_token"] for sample in SAMPLES]
+SAMPLE_META = {sample["sample_token"]: sample for sample in SAMPLES}
+RAW_BAM_OUTPUT = str(ANALYSIS_DIR / "{sample_token}" / "data" / "raw" / "{sample_token}.bam")
+
+localrules: validate_all, storage_all, basecall_all, submit_all
+
+
+def sample_meta(wildcards):
+    return SAMPLE_META[wildcards.sample]
+
+
+def sample_meta_by_token(wildcards):
+    return SAMPLE_META[wildcards.sample_token]
+
+
+def validated_marker(sample_token):
+    return str(STATE_ROOT / sample_token / "validated.ok")
+
+
+def copied_marker(sample_token):
+    return str(STATE_ROOT / sample_token / "copied.ok")
+
+
+rule validate_all:
+    input:
+        expand(validated_marker("{sample}"), sample=SAMPLE_TOKENS)
+
+
+rule storage_all:
+    input:
+        expand(copied_marker("{sample}"), sample=SAMPLE_TOKENS)
+
+
+rule basecall_all:
+    input:
+        [str(SAMPLE_META[sample]["analysis_raw_bam"]) for sample in SAMPLE_TOKENS]
+
+
+rule submit_all:
+    input:
+        [str(SAMPLE_META[sample]["analysis_raw_bam"]) for sample in SAMPLE_TOKENS]
+    run:
+        submit_env = os.environ.copy()
+        for key in ("SLURM_MEM_PER_CPU", "SLURM_MEM_PER_GPU", "SLURM_MEM_PER_NODE"):
+            submit_env.pop(key, None)
+
+        for sample_token in SAMPLE_TOKENS:
+            meta = SAMPLE_META[sample_token]
+            varseq_marker = Path(meta["varseq_marker"])
+            if varseq_marker.is_file():
+                print(f"Skipping downstream analysis for {sample_token}: {varseq_marker} exists")
+                continue
+
+            cmd = [
+                "sbatch",
+                f"--output={PREFLIGHT_LOG_DIR}/analysis-%j.out",
+                f"--error={PREFLIGHT_LOG_DIR}/analysis-%j.out",
+                RUN_SNAKEMAKE_SCRIPT,
+                sample_token,
+                "--analysis-dir",
+                str(ANALYSIS_DIR),
+            ]
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True, env=submit_env)
+            print(result.stdout.strip())
+
+
+rule validateSample:
+    output:
+        validated=validated_marker("{sample}")
+    message:
+        "Validating uploaded sample: {wildcards.sample}"
+    run:
+        meta = sample_meta(wildcards)
+        sample_dir = meta["sample_dir"]
+        run_dirs = meta["run_dirs"]
+        if not run_dirs:
+            raise ValueError(f"No run folders found for {meta['sample_name']} in {sample_dir}")
+
+        for run_dir in run_dirs:
+            csv_matches = sorted(run_dir.glob("output_hash_*.csv"))
+            if not csv_matches:
+                raise ValueError(f"Missing output_hash_*.csv in {run_dir}")
+
+        output_path = Path(output.validated)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(
+            "\n".join(
+                [
+                    f"sample_token={meta['sample_token']}",
+                    f"experiment={meta['experiment']}",
+                    f"sample_dir={sample_dir}",
+                    f"run_dir_count={len(run_dirs)}",
+                ]
+            )
+            + "\n"
+        )
+
+
+rule copySampleToStorage:
+    input:
+        validated=lambda wc: validated_marker(wc.sample)
+    output:
+        copied=copied_marker("{sample}")
+    params:
+        source_dir=lambda wc: str(sample_meta(wc)["sample_dir"]),
+        storage_parent=lambda wc: str(Path(sample_meta(wc)["storage_sample_dir"]).parent),
+        storage_dir=lambda wc: str(sample_meta(wc)["storage_sample_dir"]),
+    message:
+        "Moving sample to storage: {wildcards.sample}"
+    shell:
+        r"""
+        mkdir -p "{params.storage_parent}"
+        if [ ! -d "{params.storage_dir}" ]; then
+          mv "{params.source_dir}" "{params.storage_parent}/"
+        fi
+        mkdir -p "$(dirname "{output.copied}")"
+        printf 'moved_from\t%s\nstorage_dir\t%s\n' "{params.source_dir}" "{params.storage_dir}" > "{output.copied}"
+        """
+
+
+rule basecallSupBam:
+    input:
+        copied=lambda wc: copied_marker(wc.sample_token)
+    output:
+        bam=RAW_BAM_OUTPUT
+    params:
+        root=lambda wc: str(sample_meta_by_token(wc)["storage_sample_dir"]),
+        model=config["doradoModel"],
+        test_model=config["doradoTestModel"],
+        device=config["doradoDevice"],
+        batchsize=str(config.get("doradoBatchSize", 512)),
+        test_mode=str(config.get("doradoTestMode", 0)),
+        test_limit=str(config.get("doradoTestLimit", 1000)),
+        dorado=config["doradoBasecaller"],
+    message:
+        "Basecalling SUP BAM: {wildcards.sample_token}"
+    shell:
+        r"""
+        set -euo pipefail
+        DEVICE="{params.device}"
+        MODEL="{params.model}"
+        LIMIT_ARGS=""
+        if [ "{params.test_mode}" = "1" ] || [ "$DEVICE" = "cpu" ]; then
+          DEVICE="cpu"
+          MODEL="{params.test_model}"
+          LIMIT_ARGS="--max-reads {params.test_limit}"
+        fi
+
+        mkdir -p "{params.root}"
+        mkdir -p "$(dirname "{output.bam}")"
+        if [ -s "{output.bam}" ]; then
+          {params.dorado} basecaller \
+            -x "$DEVICE" \
+            --min-qscore 10 \
+            --batchsize {params.batchsize} \
+            --resume-from "{output.bam}" \
+            $LIMIT_ARGS \
+            "$MODEL" \
+            "{params.root}"/*/pod5/ \
+            >> "{output.bam}"
+        else
+          {params.dorado} basecaller \
+            -x "$DEVICE" \
+            --min-qscore 10 \
+            --batchsize {params.batchsize} \
+            $LIMIT_ARGS \
+            "$MODEL" \
+            "{params.root}"/*/pod5/ \
+            > "{output.bam}"
+        fi
+        """
